@@ -1,0 +1,55 @@
+RECEPÇÃO — CHECK-IN / CHECK-OUT (uso local, sem internet)
+============================================================
+
+Esta pasta contém todo o sistema. Nada aqui se conecta à internet —
+tudo roda e fica salvo só no seu computador.
+
+COMO INSTALAR (fazer uma vez):
+
+1. Windows: dê dois cliques em "iniciar.bat"
+   Mac: dê dois cliques em "iniciar.command"
+   (se o Mac bloquear por segurança, clique com o botão direito nele
+   e escolha "Abrir")
+
+2. Isso abre o navegador em http://localhost:8000 com o sistema
+   carregado.
+
+3. No navegador (Chrome/Edge), clique no ícone de instalar que
+   aparece na barra de endereço (ou no menu "⋮" → "Instalar app" /
+   "Adicionar à tela inicial"). Isso instala o sistema como um app
+   independente, em janela própria, com ícone — igual a um programa
+   instalado.
+
+4. A partir daí, você pode abrir o app instalado diretamente, sem
+   precisar rodar o iniciar novamente ENQUANTO o app estiver aberto
+   pela primeira vez com internet ativo — o service worker guarda
+   uma cópia offline. Mas para reabrir depois de reiniciar o
+   computador, sempre dê dois cliques em "iniciar.bat"/"iniciar.command"
+   primeiro (ele só liga um servidor local, não usa internet) e
+   depois abra o app instalado.
+
+IMPORTANTE SOBRE OS DADOS:
+- Os dados (quartos, reservas, clientes, caixa) ficam salvos no
+  armazenamento local do navegador nessa máquina. Não são enviados
+  a lugar nenhum.
+- Se você limpar o cache/dados do navegador, ou trocar de navegador,
+  os dados não aparecem automaticamente — use a aba "Backup" dentro
+  do sistema (já existe) para exportar um arquivo .json de backup
+  regularmente, e para importar se precisar restaurar ou migrar de
+  computador.
+- Recomendo fazer backup pelo menos 1x por semana e guardar o
+  arquivo em outro lugar (pen drive, nuvem pessoal etc.), já que se
+  o navegador perder os dados locais, só o backup salva.
+
+ARQUIVOS DA PASTA (não mexer nem separar):
+- index.html      → o sistema em si
+- manifest.json    → configuração do PWA (nome, ícone, modo standalone)
+- sw.js            → service worker, permite funcionar offline
+- servidor.ps1     → servidor local (usa o PowerShell, já vem no Windows)
+- icon-*.png       → ícones do app
+- iniciar.bat / iniciar.command → atalho para ligar o servidor local
+
+SE APARECER AVISO DE SEGURANÇA (Windows Defender / SmartScreen):
+Isso é normal para scripts baixados da internet. Clique em
+"Mais informações" → "Executar assim mesmo". O iniciar.bat só liga
+um servidor no seu próprio computador, não acessa a internet.

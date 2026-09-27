@@ -1,0 +1,2338 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recepção — Check-in / Check-out</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B332E;
+    --ink-soft:#3E524C;
+    --paper:#F2ECDD;
+    --paper-deep:#EAE2CC;
+    --card:#FCFAF3;
+    --line:#DCD2B4;
+    --brass:#B4863F;
+    --brass-deep:#8F6A2E;
+    --brass-fill:#F1E2C2;
+    --sage:#4C7A64;
+    --sage-fill:#E1EEE3;
+    --brick:#9C4636;
+    --brick-fill:#F3E1DB;
+    --shadow:0 1px 2px rgba(27,51,46,0.08);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .app{display:flex;min-height:100vh;align-items:flex-start;}
+  .sidebar{width:200px;flex:0 0 200px;background:var(--paper-deep);border-right:1px solid var(--line);min-height:100vh;padding:24px 14px;position:sticky;top:0;display:flex;flex-direction:column;gap:4px;}
+  .side-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin:0 8px 10px;}
+  .nav-btn{display:block;width:100%;text-align:left;background:none;border:none;border-radius:8px;padding:10px 12px;font-family:inherit;font-size:14px;font-weight:500;color:var(--ink-soft);cursor:pointer;}
+  .nav-btn:hover{background:rgba(27,51,46,0.06);}
+  .nav-btn.active{background:var(--ink);color:#fff;}
+  .view{display:block;}
+  .view[hidden]{display:none;}
+  .view-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin:4px 0 14px;}
+  .wrap{flex:1;min-width:0;max-width:960px;margin:0 auto;padding:28px 20px 80px;}
+
+  @media (max-width:720px){
+    .app{flex-direction:column;}
+    .sidebar{width:100%;flex:none;min-height:0;position:static;flex-direction:row;padding:10px 12px;gap:8px;border-right:none;border-bottom:1px solid var(--line);overflow-x:auto;}
+    .side-title{display:none;}
+    .nav-btn{width:auto;white-space:nowrap;}
+  }
+
+  header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:26px;border-bottom:1px solid var(--line);padding-bottom:20px;}
+  .brand{display:flex;flex-direction:column;gap:2px;}
+  .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:26px;margin:0;letter-spacing:-0.01em;cursor:text;outline:none;}
+  .brand h1:hover{color:var(--brass-deep);}
+  .brand p{margin:0;font-size:13px;color:var(--ink-soft);}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:88px;box-shadow:var(--shadow);}
+  .stat .n{font-family:'Fraunces',serif;font-size:22px;font-weight:600;line-height:1.1;}
+  .stat .l{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+
+  .floor{margin-bottom:30px;}
+  .floor h2{font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin:0 0 12px;color:var(--ink-soft);}
+  .rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;}
+
+  .room{position:relative;border-radius:10px;border:1px solid var(--line);background:var(--card);padding:12px 10px 10px;cursor:pointer;text-align:left;box-shadow:var(--shadow);transition:transform .12s ease;font-family:inherit;}
+  .room:hover{transform:translateY(-1px);}
+  .room:active{transform:translateY(0);}
+  .room .num{font-family:'Fraunces',serif;font-size:19px;font-weight:600;}
+  .room .status{font-size:11px;margin-top:6px;font-weight:500;}
+  .room .guest{font-size:11.5px;color:var(--ink-soft);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .room.livre{border-color:var(--sage);background:var(--sage-fill);}
+  .room.livre .status{color:#2F5A46;}
+  .room.ocupado{border-color:var(--brick);background:var(--brick-fill);}
+  .room.ocupado .status{color:var(--brick);}
+  .warn-badge{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:#F0B429;color:#3D2B00;font-size:13px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 3px rgba(27,51,46,0.3);z-index:2;}
+
+  .hist-list{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line);}
+  .hist-row{display:flex;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line);font-size:13px;}
+  .hist-row .who{font-weight:500;}
+  .hist-row .meta{color:var(--ink-soft);font-size:12px;}
+  .hist-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:0 0 auto;text-align:right;}
+  .hist-reprint{background:none;border:none;color:var(--brass-deep);font-size:11px;text-decoration:underline;cursor:pointer;padding:0;font-family:inherit;}
+  .hist-empty{color:var(--ink-soft);font-size:13px;padding:10px 2px;}
+
+  .cal-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .cal-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;flex:1;text-align:center;min-width:120px;}
+  .cal-nav{background:var(--card);border:1px solid var(--line);border-radius:8px;width:34px;height:34px;font-size:16px;cursor:pointer;color:var(--ink);}
+  .cal-add{flex:0 0 auto;width:auto;padding:9px 16px;}
+  .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;font-size:11px;color:var(--ink-soft);text-align:center;text-transform:uppercase;letter-spacing:.04em;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-day{min-height:92px;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:6px;display:flex;flex-direction:column;gap:4px;cursor:pointer;text-align:left;font-family:inherit;box-shadow:var(--shadow);}
+  .cal-day.empty{background:transparent;border:none;box-shadow:none;cursor:default;}
+  .cal-day .dnum{font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .cal-day.today .dnum{color:var(--brass-deep);}
+  .cal-count{font-size:10.5px;color:var(--ink-soft);margin-top:auto;}
+  .cal-day.today .cal-count{color:var(--brass-deep);}
+  #printArea{display:none;}
+  @media print{
+    @page{size:80mm auto;margin:0;}
+    body *{visibility:hidden;}
+    #printArea, #printArea *{visibility:visible;}
+    #printArea{display:block;position:absolute;top:0;left:0;width:80mm;padding:3mm 3mm 8mm;font-family:Arial,Helvetica,sans-serif;font-weight:600;font-size:14px;line-height:1.5;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    #printArea .center{text-align:center;}
+    #printArea .bold{font-weight:800;}
+    #printArea .sep{border-top:2px dashed #000;margin:5px 0;}
+  }
+
+  @media (max-width:640px){
+    .cal-day{min-height:64px;padding:4px;}
+    .cal-count{font-size:9px;}
+  }
+
+  .pick-floor{margin-bottom:14px;}
+  .pick-floor-label{font-size:12px;color:var(--ink-soft);margin-bottom:6px;font-weight:500;}
+  .pick-rooms{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+  .pick-room{border:1px solid var(--line);border-radius:8px;padding:8px 4px;font-family:inherit;cursor:pointer;background:var(--card);color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:2px;min-height:44px;}
+  .pick-room .pick-num{font-size:13px;font-weight:600;}
+  .pick-room .pick-name{font-size:9px;color:var(--brick);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .pick-room.livre{border-color:var(--sage);background:var(--sage-fill);}
+  .pick-room.reservado{border-color:var(--brick);background:var(--brick-fill);}
+  .pick-room.reservado .pick-num{color:var(--brick);}
+  .pick-room.ocupado-agora{border-color:var(--brass);background:var(--brass-fill);}
+  .pick-room.ocupado-agora .pick-num{color:var(--brass-deep);}
+  .pick-room .pick-name{line-height:1.25;}
+
+  .clients-header{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .clients-header input{flex:1;min-width:160px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink);}
+  .clients-header input:focus{outline:2px solid var(--brass);outline-offset:1px;}
+  .clients-header .btn{flex:0 0 auto;width:auto;padding:9px 16px;}
+  .client-list{display:flex;flex-direction:column;gap:8px;}
+  .client-card{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px;box-shadow:var(--shadow);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .client-card .cc-name{font-weight:600;font-size:14px;}
+  .client-card .cc-meta{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .client-empty{color:var(--ink-soft);font-size:13px;padding:10px 2px;}
+
+  .backup-info{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+  .backup-info .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:100px;box-shadow:var(--shadow);}
+  .backup-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .backup-actions .btn{flex:0 0 auto;width:auto;padding:10px 18px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+  .backup-note{font-size:12px;color:var(--ink-soft);margin-top:14px;}
+
+  .config-block{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:16px;box-shadow:var(--shadow);max-width:440px;}
+  .config-block-title{font-weight:600;font-size:14px;margin-bottom:6px;}
+  .config-block .btn{width:auto;padding:10px 16px;margin-top:6px;}
+
+  .turno-card{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:16px;box-shadow:var(--shadow);margin-bottom:18px;}
+  .turno-card-title{font-weight:600;font-size:14px;margin-bottom:10px;}
+  .turno-card .btn{width:auto;padding:10px 16px;margin-top:10px;}
+  .turno-empty{color:var(--ink-soft);font-size:13px;padding:10px 2px;}
+  .turno-mov-list{margin-top:12px;border-top:1px solid var(--line);}
+  .turno-mov-row{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .turno-mov-row .meta{color:var(--ink-soft);font-size:11.5px;}
+  .turno-list{display:flex;flex-direction:column;gap:8px;}
+  .turno-row{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px;box-shadow:var(--shadow);}
+  .turno-row .tr-top{display:flex;justify-content:space-between;font-weight:600;font-size:14px;}
+  .turno-row .tr-meta{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+
+  .overlay{position:fixed;inset:0;background:rgba(27,51,46,0.45);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--card);border-radius:14px;max-width:840px;width:100%;padding:26px 24px 24px;box-shadow:0 8px 30px rgba(27,51,46,0.25);}
+  .modal h3{font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin:0 0 4px;}
+  .modal .sub{font-size:13px;color:var(--ink-soft);margin:0 0 18px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;font-weight:500;color:var(--ink-soft);margin-bottom:5px;}
+  .field input,.field select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink);}
+  .field input:focus,.field select:focus{outline:2px solid var(--brass);outline-offset:1px;}
+  .row2{display:flex;gap:10px;}
+  .row2 .field{flex:1;}
+  .curr-toggle{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .curr-toggle button{flex:1;padding:9px 0;background:#fff;border:none;font-size:14px;font-weight:500;cursor:pointer;color:var(--ink-soft);border-left:1px solid var(--line);}
+  .curr-toggle button:first-child{border-left:none;}
+  .curr-toggle button.active{background:var(--brass);color:#fff;}
+  .err{color:var(--brick);font-size:12px;margin-top:5px;display:none;}
+  .err.show{display:block;}
+  .pix-confirmed{color:var(--sage);font-size:13px;font-weight:500;margin-top:8px;}
+  #pPixConfirmBtn{padding-left:22px;padding-right:22px;}
+  #extendBtn{width:100%;margin-bottom:8px;}
+  #reprintBtn{width:100%;margin-bottom:8px;}
+
+  .actions{display:flex;gap:10px;margin-top:20px;}
+  .btn{flex:1;padding:11px 0;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--ink);}
+  .btn.primary{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .btn.danger{background:var(--brick);border-color:var(--brick);color:#fff;}
+  .btn:active{transform:scale(0.98);}
+  .link-danger{display:block;width:100%;text-align:center;margin-top:12px;background:none;border:none;color:var(--brick);font-size:12.5px;font-family:inherit;cursor:pointer;padding:4px 0;text-decoration:underline;}
+
+  .detail{font-size:14px;}
+  .detail .drow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);}
+  .detail .drow span:first-child{color:var(--ink-soft);}
+  .detail .drow span:last-child{font-weight:500;text-align:right;}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13.5px;opacity:0;pointer-events:none;transition:all .25s ease;z-index:60;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (max-width:480px){
+    .rooms{grid-template-columns:repeat(auto-fill,minmax(80px,1fr));}
+    header{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="side-title">Menu</div>
+    <button type="button" class="nav-btn active" data-view="checkin">Check-in</button>
+    <button type="button" class="nav-btn" data-view="history">Histórico de checkout</button>
+    <button type="button" class="nav-btn" data-view="reservas">Reservas</button>
+    <button type="button" class="nav-btn" data-view="clientes">Clientes</button>
+    <button type="button" class="nav-btn" data-view="turno">Turno</button>
+    <button type="button" class="nav-btn" data-view="backup">Backup</button>
+    <button type="button" class="nav-btn" data-view="config">Configurações</button>
+  </nav>
+
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <h1 id="hotelName" contenteditable="true" spellcheck="false">Hotel — Recepção</h1>
+      <p>38 quartos · toque em um número para abrir</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n" id="statOcupados">0/38</div><div class="l">ocupados</div></div>
+    </div>
+  </header>
+
+  <section id="view-checkin" class="view">
+  <div id="floors">
+    <div class="floor">
+      <h2>1º andar</h2>
+      <div class="rooms">
+        <button type="button" class="room livre" data-room="01">
+          <div class="num">01</div>
+          <div class="status" id="status-01">Livre</div>
+          <div class="guest" id="guest-01" style="display:none;"></div>
+          <div class="warn-badge" id="warn-01" data-room="01" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="02">
+          <div class="num">02</div>
+          <div class="status" id="status-02">Livre</div>
+          <div class="guest" id="guest-02" style="display:none;"></div>
+          <div class="warn-badge" id="warn-02" data-room="02" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="03">
+          <div class="num">03</div>
+          <div class="status" id="status-03">Livre</div>
+          <div class="guest" id="guest-03" style="display:none;"></div>
+          <div class="warn-badge" id="warn-03" data-room="03" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="04">
+          <div class="num">04</div>
+          <div class="status" id="status-04">Livre</div>
+          <div class="guest" id="guest-04" style="display:none;"></div>
+          <div class="warn-badge" id="warn-04" data-room="04" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="05">
+          <div class="num">05</div>
+          <div class="status" id="status-05">Livre</div>
+          <div class="guest" id="guest-05" style="display:none;"></div>
+          <div class="warn-badge" id="warn-05" data-room="05" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="06">
+          <div class="num">06</div>
+          <div class="status" id="status-06">Livre</div>
+          <div class="guest" id="guest-06" style="display:none;"></div>
+          <div class="warn-badge" id="warn-06" data-room="06" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="07">
+          <div class="num">07</div>
+          <div class="status" id="status-07">Livre</div>
+          <div class="guest" id="guest-07" style="display:none;"></div>
+          <div class="warn-badge" id="warn-07" data-room="07" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="08">
+          <div class="num">08</div>
+          <div class="status" id="status-08">Livre</div>
+          <div class="guest" id="guest-08" style="display:none;"></div>
+          <div class="warn-badge" id="warn-08" data-room="08" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="09">
+          <div class="num">09</div>
+          <div class="status" id="status-09">Livre</div>
+          <div class="guest" id="guest-09" style="display:none;"></div>
+          <div class="warn-badge" id="warn-09" data-room="09" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="10">
+          <div class="num">10</div>
+          <div class="status" id="status-10">Livre</div>
+          <div class="guest" id="guest-10" style="display:none;"></div>
+          <div class="warn-badge" id="warn-10" data-room="10" style="display:none;">!</div>
+        </button>
+      </div>
+    </div>
+    <div class="floor">
+      <h2>2º andar</h2>
+      <div class="rooms">
+        <button type="button" class="room livre" data-room="11">
+          <div class="num">11</div>
+          <div class="status" id="status-11">Livre</div>
+          <div class="guest" id="guest-11" style="display:none;"></div>
+          <div class="warn-badge" id="warn-11" data-room="11" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="12">
+          <div class="num">12</div>
+          <div class="status" id="status-12">Livre</div>
+          <div class="guest" id="guest-12" style="display:none;"></div>
+          <div class="warn-badge" id="warn-12" data-room="12" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="13">
+          <div class="num">13</div>
+          <div class="status" id="status-13">Livre</div>
+          <div class="guest" id="guest-13" style="display:none;"></div>
+          <div class="warn-badge" id="warn-13" data-room="13" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="14">
+          <div class="num">14</div>
+          <div class="status" id="status-14">Livre</div>
+          <div class="guest" id="guest-14" style="display:none;"></div>
+          <div class="warn-badge" id="warn-14" data-room="14" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="15">
+          <div class="num">15</div>
+          <div class="status" id="status-15">Livre</div>
+          <div class="guest" id="guest-15" style="display:none;"></div>
+          <div class="warn-badge" id="warn-15" data-room="15" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="16">
+          <div class="num">16</div>
+          <div class="status" id="status-16">Livre</div>
+          <div class="guest" id="guest-16" style="display:none;"></div>
+          <div class="warn-badge" id="warn-16" data-room="16" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="17">
+          <div class="num">17</div>
+          <div class="status" id="status-17">Livre</div>
+          <div class="guest" id="guest-17" style="display:none;"></div>
+          <div class="warn-badge" id="warn-17" data-room="17" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="18">
+          <div class="num">18</div>
+          <div class="status" id="status-18">Livre</div>
+          <div class="guest" id="guest-18" style="display:none;"></div>
+          <div class="warn-badge" id="warn-18" data-room="18" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="19">
+          <div class="num">19</div>
+          <div class="status" id="status-19">Livre</div>
+          <div class="guest" id="guest-19" style="display:none;"></div>
+          <div class="warn-badge" id="warn-19" data-room="19" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="20">
+          <div class="num">20</div>
+          <div class="status" id="status-20">Livre</div>
+          <div class="guest" id="guest-20" style="display:none;"></div>
+          <div class="warn-badge" id="warn-20" data-room="20" style="display:none;">!</div>
+        </button>
+      </div>
+    </div>
+    <div class="floor">
+      <h2>3º andar</h2>
+      <div class="rooms">
+        <button type="button" class="room livre" data-room="21">
+          <div class="num">21</div>
+          <div class="status" id="status-21">Livre</div>
+          <div class="guest" id="guest-21" style="display:none;"></div>
+          <div class="warn-badge" id="warn-21" data-room="21" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="22">
+          <div class="num">22</div>
+          <div class="status" id="status-22">Livre</div>
+          <div class="guest" id="guest-22" style="display:none;"></div>
+          <div class="warn-badge" id="warn-22" data-room="22" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="23">
+          <div class="num">23</div>
+          <div class="status" id="status-23">Livre</div>
+          <div class="guest" id="guest-23" style="display:none;"></div>
+          <div class="warn-badge" id="warn-23" data-room="23" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="24">
+          <div class="num">24</div>
+          <div class="status" id="status-24">Livre</div>
+          <div class="guest" id="guest-24" style="display:none;"></div>
+          <div class="warn-badge" id="warn-24" data-room="24" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="25">
+          <div class="num">25</div>
+          <div class="status" id="status-25">Livre</div>
+          <div class="guest" id="guest-25" style="display:none;"></div>
+          <div class="warn-badge" id="warn-25" data-room="25" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="26">
+          <div class="num">26</div>
+          <div class="status" id="status-26">Livre</div>
+          <div class="guest" id="guest-26" style="display:none;"></div>
+          <div class="warn-badge" id="warn-26" data-room="26" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="27">
+          <div class="num">27</div>
+          <div class="status" id="status-27">Livre</div>
+          <div class="guest" id="guest-27" style="display:none;"></div>
+          <div class="warn-badge" id="warn-27" data-room="27" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="28">
+          <div class="num">28</div>
+          <div class="status" id="status-28">Livre</div>
+          <div class="guest" id="guest-28" style="display:none;"></div>
+          <div class="warn-badge" id="warn-28" data-room="28" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="29">
+          <div class="num">29</div>
+          <div class="status" id="status-29">Livre</div>
+          <div class="guest" id="guest-29" style="display:none;"></div>
+          <div class="warn-badge" id="warn-29" data-room="29" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="30">
+          <div class="num">30</div>
+          <div class="status" id="status-30">Livre</div>
+          <div class="guest" id="guest-30" style="display:none;"></div>
+          <div class="warn-badge" id="warn-30" data-room="30" style="display:none;">!</div>
+        </button>
+      </div>
+    </div>
+    <div class="floor">
+      <h2>4º andar</h2>
+      <div class="rooms">
+        <button type="button" class="room livre" data-room="31">
+          <div class="num">31</div>
+          <div class="status" id="status-31">Livre</div>
+          <div class="guest" id="guest-31" style="display:none;"></div>
+          <div class="warn-badge" id="warn-31" data-room="31" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="32">
+          <div class="num">32</div>
+          <div class="status" id="status-32">Livre</div>
+          <div class="guest" id="guest-32" style="display:none;"></div>
+          <div class="warn-badge" id="warn-32" data-room="32" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="33">
+          <div class="num">33</div>
+          <div class="status" id="status-33">Livre</div>
+          <div class="guest" id="guest-33" style="display:none;"></div>
+          <div class="warn-badge" id="warn-33" data-room="33" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="34">
+          <div class="num">34</div>
+          <div class="status" id="status-34">Livre</div>
+          <div class="guest" id="guest-34" style="display:none;"></div>
+          <div class="warn-badge" id="warn-34" data-room="34" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="35">
+          <div class="num">35</div>
+          <div class="status" id="status-35">Livre</div>
+          <div class="guest" id="guest-35" style="display:none;"></div>
+          <div class="warn-badge" id="warn-35" data-room="35" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="36">
+          <div class="num">36</div>
+          <div class="status" id="status-36">Livre</div>
+          <div class="guest" id="guest-36" style="display:none;"></div>
+          <div class="warn-badge" id="warn-36" data-room="36" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="37">
+          <div class="num">37</div>
+          <div class="status" id="status-37">Livre</div>
+          <div class="guest" id="guest-37" style="display:none;"></div>
+          <div class="warn-badge" id="warn-37" data-room="37" style="display:none;">!</div>
+        </button>
+        <button type="button" class="room livre" data-room="38">
+          <div class="num">38</div>
+          <div class="status" id="status-38">Livre</div>
+          <div class="guest" id="guest-38" style="display:none;"></div>
+          <div class="warn-badge" id="warn-38" data-room="38" style="display:none;">!</div>
+        </button>
+      </div>
+    </div>
+  </div>
+  </section>
+
+  <section id="view-history" class="view" hidden>
+    <h2 class="view-title">Histórico de checkout</h2>
+    <div class="hist-list" id="histList"></div>
+  </section>
+
+  <section id="view-reservas" class="view" hidden>
+    <div class="cal-header">
+      <button class="cal-nav" id="calPrev" type="button">‹</button>
+      <div class="cal-title" id="calTitle">—</div>
+      <button class="cal-nav" id="calNext" type="button">›</button>
+      <button class="btn primary cal-add" id="calAddBtn" type="button">Nova reserva</button>
+      <button class="btn cal-add" id="calListBtn" type="button">Ver todas as reservas</button>
+    </div>
+    <div class="cal-weekdays">
+      <div>dom</div><div>seg</div><div>ter</div><div>qua</div><div>qui</div><div>sex</div><div>sáb</div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </section>
+
+  <section id="view-clientes" class="view" hidden>
+    <div class="clients-header">
+      <input type="text" id="clientSearch" placeholder="Buscar por nome...">
+      <button class="btn primary" id="clientAddBtn" type="button">Novo cliente</button>
+    </div>
+    <div class="client-list" id="clientList"></div>
+  </section>
+
+  <section id="view-turno" class="view" hidden>
+    <h2 class="view-title">Turno</h2>
+    <div id="turnoAberto"></div>
+    <div id="turnoFechado"></div>
+    <h2 class="view-title" style="margin-top:24px;">Histórico de turnos</h2>
+    <div class="turno-list" id="turnoList"></div>
+  </section>
+
+  <section id="view-backup" class="view" hidden>
+    <h2 class="view-title">Backup</h2>
+    <p class="sub">Salve uma cópia de todos os dados (quartos, reservas, clientes e histórico) em um arquivo, ou restaure a partir de um backup salvo antes.</p>
+    <div class="backup-info" id="backupInfo"></div>
+    <div class="backup-actions">
+      <button class="btn primary" id="exportBtn" type="button">Exportar backup</button>
+      <label class="btn" id="importLabel" for="importFile">Importar backup</label>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+    </div>
+    <p class="backup-note">Importar um backup substitui todos os dados atuais pelos dados do arquivo.</p>
+  </section>
+
+  <section id="view-config" class="view" hidden>
+    <h2 class="view-title">Configurações</h2>
+    <div class="config-block">
+      <div class="config-block-title">Impressão de comprovantes</div>
+      <p class="sub">Tamanho da fonte usada ao imprimir os comprovantes na impressora térmica.</p>
+      <div class="curr-toggle" id="printSizeToggle">
+        <button type="button" data-size="12">Pequena</button>
+        <button type="button" data-size="14" class="active">Média</button>
+        <button type="button" data-size="16">Grande</button>
+      </div>
+    </div>
+    <div class="config-block" style="margin-top:16px;">
+      <div class="config-block-title">Histórico de checkout</div>
+      <p class="sub">Apaga permanentemente todos os registros de checkout já feitos. Os quartos, reservas e clientes cadastrados não são afetados.</p>
+      <button class="btn danger" id="clearHistoryBtn" type="button">Excluir todo histórico de checkout</button>
+    </div>
+    <div class="config-block" style="margin-top:16px;">
+      <div class="config-block-title">Histórico de turnos</div>
+      <p class="sub">Apaga permanentemente todos os turnos já encerrados (aberturas, fechamentos, pagamentos e retiradas). Um turno aberto no momento não é afetado.</p>
+      <button class="btn danger" id="clearTurnosBtn" type="button">Excluir histórico de turnos</button>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="printArea"></div>
+
+<script>
+(function(){
+  var TOTAL_ROOMS = 38;
+  var ROOM_NUMS = [];
+  for (var i=1;i<=38;i++) ROOM_NUMS.push(i < 10 ? '0' + i : '' + i);
+
+  function hasCloudStorage(){
+    return typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+  }
+
+  async function storageGet(key){
+    if (hasCloudStorage()){
+      var r = await window.storage.get(key, true);
+      return r.value;
+    }
+    var v = localStorage.getItem(key);
+    if (v === null || v === undefined) throw new Error('not found');
+    return v;
+  }
+
+  async function storageSet(key, value){
+    if (hasCloudStorage()){
+      await window.storage.set(key, value, true);
+    } else {
+      localStorage.setItem(key, value);
+    }
+  }
+
+  var state = null;
+  var history = [];
+  var reservations = [];
+  var clients = [];
+  var turnos = [];
+  var printFontSize = 14;
+
+  function defaultState(){
+    var rooms = {};
+    ROOM_NUMS.forEach(function(n){ rooms[n] = { status:'livre', guest:null }; });
+    return rooms;
+  }
+
+  function fmt(valor, moeda){
+    try{
+      if (moeda === 'BRL'){
+        return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(valor);
+      } else {
+        return new Intl.NumberFormat('es-PY',{style:'currency',currency:'PYG',maximumFractionDigits:0}).format(valor);
+      }
+    }catch(e){
+      return (moeda==='BRL'?'R$ ':'₲ ') + Math.round(valor).toString();
+    }
+  }
+
+  function toast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  }
+
+  async function loadState(){
+    try{
+      var v = await storageGet('rooms-state');
+      state = JSON.parse(v);
+    }catch(e){
+      state = defaultState();
+    }
+    try{
+      var h = await storageGet('history-log');
+      history = JSON.parse(h);
+    }catch(e){
+      history = [];
+    }
+    try{
+      var res = await storageGet('reservations-list');
+      reservations = JSON.parse(res);
+    }catch(e){
+      reservations = [];
+    }
+    try{
+      var cl = await storageGet('clients-list');
+      clients = JSON.parse(cl);
+    }catch(e){
+      clients = [];
+    }
+    try{
+      var tu = await storageGet('turnos-list');
+      turnos = JSON.parse(tu);
+    }catch(e){
+      turnos = [];
+    }
+    try{
+      var pf = await storageGet('print-font-size');
+      var pfNum = Number(pf);
+      var migracao = { 10: 12, 12: 14, 14: 16 };
+      if (migracao[pfNum] != null) pfNum = migracao[pfNum];
+      printFontSize = [12,14,16].indexOf(pfNum) > -1 ? pfNum : 14;
+    }catch(e){
+      printFontSize = 14;
+    }
+    render();
+  }
+
+  async function saveState(){
+    try{
+      await storageSet('rooms-state', JSON.stringify(state));
+    }catch(e){
+      toast('Não foi possível salvar. Tente novamente.');
+    }
+  }
+
+  async function saveHistory(){
+    try{
+      await storageSet('history-log', JSON.stringify(history));
+    }catch(e){}
+  }
+
+  async function saveReservations(){
+    try{
+      await storageSet('reservations-list', JSON.stringify(reservations));
+    }catch(e){
+      toast('Não foi possível salvar a reserva.');
+    }
+  }
+
+  async function saveClients(){
+    try{
+      await storageSet('clients-list', JSON.stringify(clients));
+    }catch(e){
+      toast('Não foi possível salvar o cliente.');
+    }
+  }
+
+  async function saveTurnos(){
+    try{
+      await storageSet('turnos-list', JSON.stringify(turnos));
+    }catch(e){
+      toast('Não foi possível salvar o turno.');
+    }
+  }
+
+  function render(){
+    renderFloors();
+    renderStats();
+    renderHistory();
+    renderCalendar();
+    renderClients();
+    renderBackupInfo();
+    renderTurno();
+    renderPrintSettings();
+  }
+
+  function renderFloors(){
+    ROOM_NUMS.forEach(function(n){
+      var r = state[n] || {status:'livre', guest:null};
+      var btn = document.querySelector('.room[data-room="' + n + '"]');
+      if (!btn) return;
+      btn.className = 'room ' + r.status;
+      var statusEl = document.getElementById('status-' + n);
+      var guestEl = document.getElementById('guest-' + n);
+      if (statusEl) statusEl.textContent = r.status === 'livre' ? 'Livre' : 'Ocupado';
+      if (guestEl){
+        if (r.status === 'ocupado' && r.guest){
+          guestEl.style.display = 'block';
+          guestEl.textContent = r.guest.nome;
+        } else {
+          guestEl.style.display = 'none';
+          guestEl.textContent = '';
+        }
+      }
+      var warnEl = document.getElementById('warn-' + n);
+      if (warnEl){
+        var conflict = reservationForRoomOnDay(n, todayISO());
+        warnEl.style.display = conflict ? 'flex' : 'none';
+      }
+    });
+  }
+
+  function bindRoomClicks(){
+    document.querySelectorAll('.room[data-room]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        openRoom(btn.dataset.room);
+      });
+    });
+    document.querySelectorAll('.warn-badge[data-room]').forEach(function(badge){
+      badge.addEventListener('click', function(e){
+        e.stopPropagation();
+        var n = badge.dataset.room;
+        var conflict = reservationForRoomOnDay(n, todayISO());
+        if (conflict) openReservationForm(conflict, null);
+      });
+    });
+  }
+
+  function renderStats(){
+    var ocupados = 0;
+    Object.keys(state).forEach(function(k){
+      if (state[k].status === 'ocupado') ocupados++;
+    });
+    document.getElementById('statOcupados').textContent = ocupados + '/' + TOTAL_ROOMS;
+  }
+
+  function renderHistory(){
+    var list = document.getElementById('histList');
+    if (history.length === 0){
+      list.innerHTML = '<div class="hist-empty">Nenhum checkout registrado ainda.</div>';
+      return;
+    }
+    var items = history.slice().reverse().slice(0,60);
+    list.innerHTML = '';
+    items.forEach(function(h){
+      var pago = (h.recebido != null) ? ' · Recebido ' + fmt(h.recebido, h.moeda) + (h.formaPagamento ? ' (' + h.formaPagamento + ')' : '') + ' · Troco ' + fmt(h.troco||0, h.moeda) : '';
+      var formasAntes = formasPagamentosParciais(h.pagamentosParciais);
+      var antes = (h.pagoAntes > 0) ? ' · Pago antes ' + fmt(h.pagoAntes, h.moeda) + (formasAntes ? ' (' + formasAntes + ')' : '') : '';
+      var diariasTxt = h.diarias ? (h.diarias + (h.diarias === 1 ? ' diária' : ' diárias') + ' · ') : '';
+      var valorTotal = (h.total != null) ? h.total : h.preco;
+
+      var row = document.createElement('div');
+      row.className = 'hist-row';
+
+      var left = document.createElement('div');
+      left.innerHTML = '<div class="who">' + escapeHtml(h.nome) + ' — quarto ' + h.quarto + '</div>' +
+        '<div class="meta">' + diariasTxt + 'Check-in ' + h.checkin + ' · Checkout ' + h.checkout + antes + pago + '</div>';
+
+      var right = document.createElement('div');
+      right.className = 'hist-right';
+      var valorEl = document.createElement('div');
+      valorEl.textContent = fmt(valorTotal, h.moeda);
+      right.appendChild(valorEl);
+
+      if (h.recebido != null){
+        var reBtn = document.createElement('button');
+        reBtn.type = 'button';
+        reBtn.className = 'hist-reprint';
+        reBtn.textContent = 'Reimprimir';
+        reBtn.addEventListener('click', function(){
+          imprimirRecibo(reciboPagamentoHTML({
+            quarto: h.quarto,
+            nome: h.nome,
+            checkin: h.checkin,
+            checkout: h.checkout,
+            diarias: h.diarias || 1,
+            precoDiaria: h.preco,
+            total: valorTotal,
+            pagoAntes: h.pagoAntes || 0,
+            pagamentosParciais: h.pagamentosParciais || [],
+            recebido: h.recebido,
+            troco: h.troco || 0,
+            moeda: h.moeda,
+            forma: h.formaPagamento || 'Dinheiro'
+          }));
+        });
+        right.appendChild(reBtn);
+      }
+
+      row.appendChild(left);
+      row.appendChild(right);
+      list.appendChild(row);
+    });
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : s;
+    return d.innerHTML;
+  }
+
+  function formasPagamentosParciais(lista){
+    if (!Array.isArray(lista) || lista.length === 0) return '';
+    var formas = [];
+    lista.forEach(function(p){
+      if (p.forma && formas.indexOf(p.forma) === -1) formas.push(p.forma);
+    });
+    return formas.join(', ');
+  }
+
+  // ---- Impressão de comprovantes (térmica 80mm) ----
+  function nomeHotel(){
+    var el = document.getElementById('hotelName');
+    return el ? el.textContent.trim() : 'Hotel';
+  }
+
+  function imprimirRecibo(html){
+    var area = document.getElementById('printArea');
+    area.innerHTML = html;
+    area.style.fontSize = printFontSize + 'px';
+    setTimeout(function(){ window.print(); }, 50);
+  }
+
+  function renderPrintSettings(){
+    var toggle = document.getElementById('printSizeToggle');
+    if (!toggle) return;
+    Array.from(toggle.querySelectorAll('button')).forEach(function(b){
+      b.classList.toggle('active', Number(b.dataset.size) === printFontSize);
+    });
+  }
+
+  function reciboCheckinHTML(n, g){
+    return '<div class="center bold">' + escapeHtml(nomeHotel()) + '</div>' +
+      '<div class="center">Comprovante de Check-in</div>' +
+      '<div class="sep"></div>' +
+      '<div>Quarto: ' + escapeHtml(n) + '</div>' +
+      '<div>Hóspede: ' + escapeHtml(g.nome) + '</div>' +
+      (g.documento ? '<div>Documento: ' + escapeHtml(g.documento) + '</div>' : '') +
+      (g.nacionalidade ? '<div>Nacionalidade: ' + escapeHtml(g.nacionalidade) + '</div>' : '') +
+      (g.telefone ? '<div>Telefone: ' + escapeHtml(g.telefone) + '</div>' : '') +
+      '<div>Check-in: ' + escapeHtml(g.checkin) + '</div>' +
+      (g.previsao ? '<div>Previsão checkout: ' + escapeHtml(g.previsao) + '</div>' : '') +
+      '<div>Diária: ' + fmt(g.preco, g.moeda) + '</div>' +
+      (g.descricao ? '<div>Obs: ' + escapeHtml(g.descricao) + '</div>' : '') +
+      '<div class="sep"></div>' +
+      '<div class="center">Impresso em ' + todayStr() + ' ' + horaAtual() + '</div>';
+  }
+
+  function reciboPagamentoHTML(opts){
+    var linhas = '<div class="center bold">' + escapeHtml(nomeHotel()) + '</div>' +
+      '<div class="center">Comprovante de Pagamento</div>' +
+      '<div class="sep"></div>' +
+      '<div>Quarto: ' + escapeHtml(opts.quarto) + '</div>' +
+      '<div>Hóspede: ' + escapeHtml(opts.nome) + '</div>' +
+      '<div>Check-in: ' + escapeHtml(opts.checkin) + '</div>' +
+      '<div>Checkout: ' + escapeHtml(opts.checkout) + '</div>' +
+      '<div>Diárias: ' + opts.diarias + '</div>' +
+      '<div>Valor da diária: ' + fmt(opts.precoDiaria, opts.moeda) + '</div>' +
+      '<div>Total da estadia: ' + fmt(opts.total, opts.moeda) + '</div>' +
+      (opts.pagoAntes > 0 ? '<div>Pago antes: ' + fmt(opts.pagoAntes, opts.moeda) + (formasPagamentosParciais(opts.pagamentosParciais) ? ' (' + formasPagamentosParciais(opts.pagamentosParciais) + ')' : '') + '</div>' : '') +
+      '<div>Saldo pago agora: ' + fmt(opts.recebido - opts.troco, opts.moeda) + '</div>' +
+      '<div>Forma de pagamento: ' + escapeHtml(opts.forma) + '</div>' +
+      (opts.forma === 'Dinheiro' ? '<div>Recebido: ' + fmt(opts.recebido, opts.moeda) + '</div><div>Troco: ' + fmt(opts.troco, opts.moeda) + '</div>' : '') +
+      '<div class="sep"></div>' +
+      '<div class="center">Impresso em ' + todayStr() + ' ' + horaAtual() + '</div>';
+    return linhas;
+  }
+
+  function perguntarEImprimirCheckin(n, g){
+    if (confirm('Deseja imprimir o comprovante de check-in?')){
+      imprimirRecibo(reciboCheckinHTML(n, g));
+    }
+  }
+
+  function perguntarEImprimirPagamento(opts){
+    if (confirm('Deseja imprimir o comprovante de pagamento?')){
+      imprimirRecibo(reciboPagamentoHTML(opts));
+    }
+  }
+
+  function reciboAberturaTurnoHTML(t){
+    return '<div class="center bold">' + escapeHtml(nomeHotel()) + '</div>' +
+      '<div class="center">Abertura de Turno</div>' +
+      '<div class="sep"></div>' +
+      '<div>Operador: ' + escapeHtml(t.operador) + '</div>' +
+      '<div>Abertura: ' + t.aberturaData + ' ' + t.aberturaHora + '</div>' +
+      '<div>Caixa inicial (R$): ' + fmt(t.valorAberturaBRL||0,'BRL') + '</div>' +
+      '<div>Caixa inicial (₲): ' + fmt(t.valorAberturaPYG||0,'PYG') + '</div>' +
+      '<div class="sep"></div>' +
+      '<div class="center">Impresso em ' + todayStr() + ' ' + horaAtual() + '</div>';
+  }
+
+  function reciboFechamentoTurnoHTML(t, dinheiroBRL, dinheiroPYG, retiradaBRL, retiradaPYG){
+    return '<div class="center bold">' + escapeHtml(nomeHotel()) + '</div>' +
+      '<div class="center">Fechamento de Turno</div>' +
+      '<div class="sep"></div>' +
+      '<div>Operador: ' + escapeHtml(t.operador) + '</div>' +
+      '<div>Abertura: ' + t.aberturaData + ' ' + t.aberturaHora + '</div>' +
+      '<div>Fechamento: ' + t.fechamentoData + ' ' + t.fechamentoHora + '</div>' +
+      '<div class="sep"></div>' +
+      '<div>Caixa inicial (R$): ' + fmt(t.valorAberturaBRL||0,'BRL') + '</div>' +
+      '<div>Caixa inicial (₲): ' + fmt(t.valorAberturaPYG||0,'PYG') + '</div>' +
+      '<div>Recebido dinheiro (R$): ' + fmt(dinheiroBRL,'BRL') + '</div>' +
+      '<div>Recebido dinheiro (₲): ' + fmt(dinheiroPYG,'PYG') + '</div>' +
+      (retiradaBRL > 0 ? '<div>Retiradas (R$): -' + fmt(retiradaBRL,'BRL') + '</div>' : '') +
+      (retiradaPYG > 0 ? '<div>Retiradas (₲): -' + fmt(retiradaPYG,'PYG') + '</div>' : '') +
+      '<div>Esperado (R$): ' + fmt(t.esperadoBRL||0,'BRL') + '</div>' +
+      '<div>Esperado (₲): ' + fmt(t.esperadoPYG||0,'PYG') + '</div>' +
+      '<div>Contado (R$): ' + fmt(t.contadoBRL||0,'BRL') + '</div>' +
+      '<div>Contado (₲): ' + fmt(t.contadoPYG||0,'PYG') + '</div>' +
+      '<div>Diferença (R$): ' + fmt(t.diferencaBRL||0,'BRL') + '</div>' +
+      '<div>Diferença (₲): ' + fmt(t.diferencaPYG||0,'PYG') + '</div>' +
+      '<div class="sep"></div>' +
+      '<div class="center">Impresso em ' + todayStr() + ' ' + horaAtual() + '</div>';
+  }
+
+  function perguntarEImprimirAberturaTurno(t){
+    if (confirm('Deseja imprimir o comprovante de abertura de turno?')){
+      imprimirRecibo(reciboAberturaTurnoHTML(t));
+    }
+  }
+
+  function perguntarEImprimirFechamentoTurno(t, dinheiroBRL, dinheiroPYG, retiradaBRL, retiradaPYG){
+    if (confirm('Deseja imprimir o comprovante de fechamento de turno?')){
+      imprimirRecibo(reciboFechamentoTurnoHTML(t, dinheiroBRL, dinheiroPYG, retiradaBRL, retiradaPYG));
+    }
+  }
+
+  function todayStr(){
+    var d = new Date();
+    return d.toLocaleDateString('pt-BR');
+  }
+
+  function todayISO(){
+    var d = new Date();
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+  }
+
+  function isoToBR(iso){
+    if (!iso) return '';
+    var p = iso.split('-');
+    if (p.length !== 3) return iso;
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+
+  function brToISO(br){
+    if (!br) return '';
+    var p = br.split('/');
+    if (p.length !== 3) return '';
+    var day = p[0].padStart ? p[0].padStart(2,'0') : (p[0].length<2?'0'+p[0]:p[0]);
+    var mon = p[1].padStart ? p[1].padStart(2,'0') : (p[1].length<2?'0'+p[1]:p[1]);
+    return p[2] + '-' + mon + '-' + day;
+  }
+
+  function diariasDesde(checkinBR){
+    if (!checkinBR) return 1;
+    var p = checkinBR.split('/');
+    if (p.length !== 3) return 1;
+    var checkinDate = new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]));
+    var hoje = new Date();
+    var hojeSemHora = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    var diffDias = Math.round((hojeSemHora - checkinDate) / 86400000);
+    return diffDias < 1 ? 1 : diffDias;
+  }
+
+  function addDaysISO(iso, days){
+    var p = iso.split('-');
+    var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    d.setDate(d.getDate() + days);
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+  }
+
+  function openOverlay(html){
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('overlay').classList.add('show');
+  }
+  function closeOverlay(){
+    document.getElementById('overlay').classList.remove('show');
+  }
+  document.getElementById('overlay').addEventListener('click', function(e){
+    if (e.target.id === 'overlay') closeOverlay();
+  });
+
+  function openRoom(n){
+    var r = state[n];
+    if (r.status === 'livre'){
+      openCheckinForm(n);
+    } else {
+      openGuestDetail(n, r);
+    }
+  }
+
+  function openCheckinForm(n){
+    openOverlay(
+      '<h3>Check-in — quarto ' + n + '</h3>' +
+      '<p class="sub">Preencha os dados do hóspede.</p>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="fNome">Nome completo</label><input id="fNome" list="clientNameListChk" placeholder="Nome do hóspede"></div>' +
+        '<div class="field"><label for="fTelefone">Telefone</label><input id="fTelefone" placeholder="(00) 00000-0000"></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="fDocumento">Documento</label><input id="fDocumento" list="clientDocListChk" placeholder="RG, CPF ou passaporte"></div>' +
+        '<div class="field"><label for="fNacionalidade">Nacionalidade</label>' +
+          '<input id="fNacionalidade" list="nacList" placeholder="Brasileira, paraguaia...">' +
+          '<datalist id="nacList"><option value="Brasileira"><option value="Paraguaia"><option value="Argentina"><option value="Uruguaia"><option value="Boliviana"></datalist>' +
+        '</div>' +
+      '</div>' +
+      '<datalist id="clientNameListChk">' + clientNameOptions() + '</datalist>' +
+      '<datalist id="clientDocListChk">' + clientDocOptions() + '</datalist>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="fPreco">Preço da diária</label><input id="fPreco" type="number" min="0" step="0.01" placeholder="0"></div>' +
+        '<div class="field"><label>Moeda</label><div class="curr-toggle" id="currToggle">' +
+          '<button type="button" data-c="BRL" class="active">R$</button>' +
+          '<button type="button" data-c="PYG">₲</button>' +
+        '</div></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="fCheckin">Data de check-in</label><input id="fCheckin" type="date"></div>' +
+        '<div class="field"><label for="fPrevisao">Previsão de checkout</label><input id="fPrevisao" type="date"></div>' +
+      '</div>' +
+      '<div class="field"><label for="fDescricao">Descrição</label><input id="fDescricao" placeholder="Observações sobre a estadia"></div>' +
+      '<div class="err" id="formErr">Preencha nome, preço e data de check-in para continuar.</div>' +
+      '<div class="actions">' +
+        '<button class="btn" id="cancelBtn" type="button">Cancelar</button>' +
+        '<button class="btn primary" id="confirmBtn" type="button">Fazer check-in</button>' +
+      '</div>'
+    );
+    var moeda = 'BRL';
+    document.getElementById('fCheckin').value = todayISO();
+    document.getElementById('fPrevisao').value = addDaysISO(todayISO(), 1);
+    bindClientAutofill('f');
+    document.getElementById('currToggle').addEventListener('click', function(e){
+      var b = e.target.closest('button');
+      if (!b) return;
+      moeda = b.dataset.c;
+      Array.from(document.querySelectorAll('#currToggle button')).forEach(function(x){ x.classList.toggle('active', x===b); });
+    });
+    document.getElementById('cancelBtn').addEventListener('click', closeOverlay);
+    document.getElementById('confirmBtn').addEventListener('click', function(){
+      var nome = document.getElementById('fNome').value.trim();
+      var preco = document.getElementById('fPreco').value;
+      var checkinIso = document.getElementById('fCheckin').value;
+      var previsaoIso = document.getElementById('fPrevisao').value;
+      var err = document.getElementById('formErr');
+      if (!nome || preco === '' || isNaN(Number(preco)) || Number(preco) < 0 || !checkinIso){
+        err.classList.add('show');
+        return;
+      }
+      err.classList.remove('show');
+      state[n] = {
+        status: 'ocupado',
+        guest: {
+          nome: nome,
+          telefone: document.getElementById('fTelefone').value.trim(),
+          documento: document.getElementById('fDocumento').value.trim(),
+          nacionalidade: document.getElementById('fNacionalidade').value.trim(),
+          preco: Number(preco),
+          moeda: moeda,
+          descricao: document.getElementById('fDescricao').value.trim(),
+          checkin: isoToBR(checkinIso),
+          previsao: isoToBR(previsaoIso)
+        }
+      };
+      saveState();
+      upsertClientFromGuest(state[n].guest);
+      render();
+      closeOverlay();
+      toast('Check-in feito — quarto ' + n);
+      perguntarEImprimirCheckin(n, state[n].guest);
+    });
+  }
+
+  function openGuestDetail(n, r){
+    var g = r.guest || {};
+    openOverlay(
+      '<h3>Quarto ' + n + '</h3>' +
+      '<p class="sub">Ocupado desde ' + escapeHtml(g.checkin||'—') + '</p>' +
+      '<div class="detail">' +
+        '<div class="drow"><span>Nome</span><span>' + escapeHtml(g.nome) + '</span></div>' +
+        '<div class="drow"><span>Telefone</span><span>' + escapeHtml(g.telefone||'—') + '</span></div>' +
+        '<div class="drow"><span>Documento</span><span>' + escapeHtml(g.documento||'—') + '</span></div>' +
+        '<div class="drow"><span>Nacionalidade</span><span>' + escapeHtml(g.nacionalidade||'—') + '</span></div>' +
+        '<div class="drow"><span>Preço da diária</span><span>' + fmt(g.preco, g.moeda) + '</span></div>' +
+        (g.previsao ? '<div class="drow"><span>Previsão de checkout</span><span>' + escapeHtml(g.previsao) + '</span></div>' : '') +
+        (g.descricao ? '<div class="drow"><span>Descrição</span><span>' + escapeHtml(g.descricao) + '</span></div>' : '') +
+        (Number(g.pago) > 0 ? '<div class="drow"><span>Pago até agora</span><span>' + fmt(g.pago, g.moeda) + (formasPagamentosParciais(g.pagamentosParciais) ? ' (' + formasPagamentosParciais(g.pagamentosParciais) + ')' : '') + '</span></div>' : '') +
+      '</div>' +
+      '<button class="btn" id="extendBtn" type="button">+1 diária</button>' +
+      '<div class="err" id="extendErr">Não é possível: já existe reserva para esse dia.</div>' +
+      '<button class="btn" id="reprintBtn" type="button">Reimprimir comprovante de check-in</button>' +
+      '<div class="actions">' +
+        '<button class="btn" id="closeBtn" type="button">Fechar</button>' +
+        '<button class="btn" id="partialBtn" type="button">Pagamento parcial</button>' +
+        '<button class="btn danger" id="checkoutBtn" type="button">Fazer checkout</button>' +
+      '</div>' +
+      '<button class="link-danger" id="deleteBtn" type="button">Excluir check-in (não salva no histórico)</button>'
+    );
+    document.getElementById('closeBtn').addEventListener('click', closeOverlay);
+    document.getElementById('reprintBtn').addEventListener('click', function(){
+      imprimirRecibo(reciboCheckinHTML(n, g));
+    });
+    document.getElementById('extendBtn').addEventListener('click', function(){
+      var err = document.getElementById('extendErr');
+      var baseISO = g.previsao ? brToISO(g.previsao) : addDaysISO(brToISO(g.checkin) || todayISO(), 1);
+      if (!baseISO){
+        err.textContent = 'Não foi possível calcular a data atual de previsão.';
+        err.classList.add('show');
+        return;
+      }
+      var novaNoite = baseISO;
+      var conflito = reservationForRoomOnDay(n, novaNoite);
+      if (conflito){
+        err.textContent = 'Não é possível: o quarto ' + n + ' já tem reserva de ' + conflito.nome + ' para ' + isoToBR(novaNoite) + '.';
+        err.classList.add('show');
+        return;
+      }
+      err.classList.remove('show');
+      var novaPrevisao = addDaysISO(baseISO, 1);
+      state[n].guest.previsao = isoToBR(novaPrevisao);
+      saveState();
+      render();
+      closeOverlay();
+      toast('Diária adicionada — nova previsão: ' + isoToBR(novaPrevisao));
+    });
+    document.getElementById('partialBtn').addEventListener('click', function(){
+      if (!turnoAtual()){
+        alert('Não é possível registrar pagamentos sem um turno de caixa aberto. Abra um turno na aba "Turno" antes de continuar.');
+        return;
+      }
+      openPartialPaymentScreen(n, r);
+    });
+    document.getElementById('checkoutBtn').addEventListener('click', function(){
+      if (!turnoAtual()){
+        alert('Não é possível registrar pagamentos sem um turno de caixa aberto. Abra um turno na aba "Turno" antes de continuar.');
+        return;
+      }
+      openPaymentScreen(n, r);
+    });
+    document.getElementById('deleteBtn').addEventListener('click', function(){
+      if (!confirm('Excluir este check-in do quarto ' + n + '? Isso não fica salvo no histórico.')) return;
+      state[n] = { status:'livre', guest:null };
+      saveState();
+      render();
+      closeOverlay();
+      toast('Check-in excluído — quarto ' + n);
+    });
+  }
+
+  function openPaymentScreen(n, r){
+    var g = r.guest || {};
+    var diarias = diariasDesde(g.checkin);
+    var precoDiaria = Number(g.preco) || 0;
+    var totalEstadia = diarias * precoDiaria;
+    var jaPago = Number(g.pago) || 0;
+    var saldo = Math.max(0, totalEstadia - jaPago);
+    var moedaSymbol = g.moeda === 'PYG' ? '₲' : 'R$';
+    openOverlay(
+      '<h3>Pagamento — quarto ' + n + '</h3>' +
+      '<p class="sub">Checkout de ' + escapeHtml(g.nome) + '</p>' +
+      '<div class="detail">' +
+        '<div class="drow"><span>Diárias (desde ' + escapeHtml(g.checkin||'—') + ')</span><span>' + diarias + '</span></div>' +
+        '<div class="drow"><span>Valor da diária</span><span>' + fmt(precoDiaria, g.moeda) + '</span></div>' +
+        '<div class="drow"><span>Total da estadia</span><span>' + fmt(totalEstadia, g.moeda) + '</span></div>' +
+        (jaPago > 0 ? '<div class="drow"><span>Já pago</span><span>' + fmt(jaPago, g.moeda) + (formasPagamentosParciais(g.pagamentosParciais) ? ' (' + formasPagamentosParciais(g.pagamentosParciais) + ')' : '') + '</span></div>' : '') +
+        '<div class="drow"><span>Saldo a pagar</span><span>' + fmt(saldo, g.moeda) + '</span></div>' +
+      '</div>' +
+      '<div class="field"><label>Forma de pagamento</label><div class="curr-toggle" id="pMetodoToggle">' +
+        '<button type="button" data-m="Dinheiro" class="active">Dinheiro</button>' +
+        '<button type="button" data-m="Pix/Transferência">Pix/Transferência</button>' +
+      '</div></div>' +
+      '<div id="pCashFields">' +
+        '<div class="field"><label for="pRecebido">Valor recebido (' + moedaSymbol + ')</label><input id="pRecebido" type="number" min="0" step="0.01" placeholder="0"></div>' +
+        '<div class="detail">' +
+          '<div class="drow"><span>Troco</span><span id="pTroco">' + fmt(0, g.moeda) + '</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="pPixFields" style="display:none;">' +
+        '<div class="detail"><div class="drow"><span>Valor a receber via Pix/Transferência</span><span>' + fmt(saldo, g.moeda) + '</span></div></div>' +
+        '<button type="button" class="btn" id="pPixConfirmBtn">Confirmar recebimento do Pix/Transferência</button>' +
+        '<div class="pix-confirmed" id="pPixStatus" style="display:none;">✓ Recebimento do Pix/Transferência confirmado</div>' +
+      '</div>' +
+      '<div class="err" id="pErr">Informe um valor recebido igual ou maior que o saldo.</div>' +
+      '<div class="actions">' +
+        '<button class="btn" id="pCancelBtn" type="button">Cancelar</button>' +
+        '<button class="btn primary" id="pConfirmBtn" type="button">Confirmar checkout</button>' +
+      '</div>'
+    );
+    var metodo = 'Dinheiro';
+    var pixConfirmado = false;
+    var cashFields = document.getElementById('pCashFields');
+    var pixFields = document.getElementById('pPixFields');
+    var pixStatus = document.getElementById('pPixStatus');
+    var pixConfirmBtn = document.getElementById('pPixConfirmBtn');
+    document.getElementById('pMetodoToggle').addEventListener('click', function(e){
+      var b = e.target.closest('button');
+      if (!b) return;
+      metodo = b.dataset.m;
+      Array.from(document.querySelectorAll('#pMetodoToggle button')).forEach(function(x){ x.classList.toggle('active', x===b); });
+      cashFields.style.display = (metodo === 'Dinheiro') ? 'block' : 'none';
+      pixFields.style.display = (metodo === 'Pix/Transferência') ? 'block' : 'none';
+      pixConfirmado = false;
+      pixStatus.style.display = 'none';
+      pixConfirmBtn.style.display = 'inline-flex';
+      document.getElementById('pErr').classList.remove('show');
+    });
+    pixConfirmBtn.addEventListener('click', function(){
+      pixConfirmado = true;
+      pixStatus.style.display = 'block';
+      pixConfirmBtn.style.display = 'none';
+      document.getElementById('pErr').classList.remove('show');
+    });
+    var recebidoEl = document.getElementById('pRecebido');
+    var trocoEl = document.getElementById('pTroco');
+    recebidoEl.addEventListener('input', function(){
+      var v = Number(recebidoEl.value) || 0;
+      var troco = v - saldo;
+      trocoEl.textContent = fmt(troco < 0 ? 0 : troco, g.moeda);
+    });
+    document.getElementById('pCancelBtn').addEventListener('click', closeOverlay);
+    document.getElementById('pConfirmBtn').addEventListener('click', function(){
+      var err = document.getElementById('pErr');
+      if (!turnoAtual()){
+        err.textContent = 'O turno de caixa foi fechado. Abra um turno antes de confirmar o pagamento.';
+        err.classList.add('show');
+        return;
+      }
+      var recebido, troco;
+      if (metodo === 'Dinheiro'){
+        recebido = Number(recebidoEl.value);
+        if (recebidoEl.value === '' || isNaN(recebido) || recebido < saldo){
+          err.textContent = 'Informe um valor recebido igual ou maior que o saldo.';
+          err.classList.add('show');
+          return;
+        }
+        troco = recebido - saldo;
+      } else {
+        if (!pixConfirmado){
+          err.textContent = 'Confirme o recebimento do Pix/Transferência antes de continuar.';
+          err.classList.add('show');
+          return;
+        }
+        recebido = saldo;
+        troco = 0;
+      }
+      err.classList.remove('show');
+      history.push({
+        quarto: n,
+        nome: g.nome,
+        checkin: g.checkin,
+        checkout: todayStr(),
+        preco: precoDiaria,
+        diarias: diarias,
+        total: totalEstadia,
+        pagoAntes: jaPago,
+        pagamentosParciais: g.pagamentosParciais || [],
+        moeda: g.moeda,
+        recebido: recebido,
+        troco: troco,
+        formaPagamento: metodo
+      });
+      state[n] = { status:'livre', guest:null };
+      saveState();
+      saveHistory();
+      registrarMovimentoCaixa({
+        quarto: n,
+        nome: g.nome,
+        valor: recebido - troco,
+        recebido: recebido,
+        troco: troco,
+        moeda: g.moeda,
+        forma: metodo,
+        tipo: 'checkout',
+        data: todayStr(),
+        hora: horaAtual()
+      });
+      render();
+      closeOverlay();
+      toast('Checkout feito — quarto ' + n);
+      perguntarEImprimirPagamento({
+        quarto: n,
+        nome: g.nome,
+        checkin: g.checkin,
+        checkout: todayStr(),
+        diarias: diarias,
+        precoDiaria: precoDiaria,
+        total: totalEstadia,
+        pagoAntes: jaPago,
+        pagamentosParciais: g.pagamentosParciais || [],
+        recebido: recebido,
+        troco: troco,
+        moeda: g.moeda,
+        forma: metodo
+      });
+    });
+  }
+
+  function openPartialPaymentScreen(n, r){
+    var g = r.guest || {};
+    var diarias = diariasDesde(g.checkin);
+    var precoDiaria = Number(g.preco) || 0;
+    var totalEstadia = diarias * precoDiaria;
+    var jaPago = Number(g.pago) || 0;
+    var saldo = Math.max(0, totalEstadia - jaPago);
+    openOverlay(
+      '<h3>Pagamento parcial — quarto ' + n + '</h3>' +
+      '<p class="sub">' + escapeHtml(g.nome) + '</p>' +
+      '<div class="detail">' +
+        '<div class="drow"><span>Diárias até hoje</span><span>' + diarias + '</span></div>' +
+        '<div class="drow"><span>Total estimado da estadia</span><span>' + fmt(totalEstadia, g.moeda) + '</span></div>' +
+        (jaPago > 0 ? '<div class="drow"><span>Já pago</span><span>' + fmt(jaPago, g.moeda) + (formasPagamentosParciais(g.pagamentosParciais) ? ' (' + formasPagamentosParciais(g.pagamentosParciais) + ')' : '') + '</span></div>' : '') +
+        '<div class="drow"><span>Saldo restante</span><span>' + fmt(saldo, g.moeda) + '</span></div>' +
+      '</div>' +
+      '<div class="field"><label>Forma de pagamento</label><div class="curr-toggle" id="ppMetodoToggle">' +
+        '<button type="button" data-m="Dinheiro" class="active">Dinheiro</button>' +
+        '<button type="button" data-m="Pix/Transferência">Pix/Transferência</button>' +
+      '</div></div>' +
+      '<div class="field"><label for="ppValor">Valor recebido agora</label><input id="ppValor" type="number" min="0" step="0.01" placeholder="0"></div>' +
+      '<div class="err" id="ppErr">Informe um valor maior que zero.</div>' +
+      '<div class="actions">' +
+        '<button class="btn" id="ppCancelBtn" type="button">Cancelar</button>' +
+        '<button class="btn primary" id="ppConfirmBtn" type="button">Registrar pagamento</button>' +
+      '</div>'
+    );
+    var ppMetodo = 'Dinheiro';
+    document.getElementById('ppMetodoToggle').addEventListener('click', function(e){
+      var b = e.target.closest('button');
+      if (!b) return;
+      ppMetodo = b.dataset.m;
+      Array.from(document.querySelectorAll('#ppMetodoToggle button')).forEach(function(x){ x.classList.toggle('active', x===b); });
+    });
+    document.getElementById('ppCancelBtn').addEventListener('click', closeOverlay);
+    document.getElementById('ppConfirmBtn').addEventListener('click', function(){
+      var valorEl = document.getElementById('ppValor');
+      var valor = Number(valorEl.value);
+      var err = document.getElementById('ppErr');
+      if (!turnoAtual()){
+        err.textContent = 'O turno de caixa foi fechado. Abra um turno antes de confirmar o pagamento.';
+        err.classList.add('show');
+        return;
+      }
+      if (valorEl.value === '' || isNaN(valor) || valor <= 0){
+        err.textContent = 'Informe um valor maior que zero.';
+        err.classList.add('show');
+        return;
+      }
+      err.classList.remove('show');
+      state[n].guest.pago = jaPago + valor;
+      if (!Array.isArray(state[n].guest.pagamentosParciais)) state[n].guest.pagamentosParciais = [];
+      state[n].guest.pagamentosParciais.push({ valor: valor, forma: ppMetodo, data: todayStr() });
+      saveState();
+      registrarMovimentoCaixa({
+        quarto: n,
+        nome: g.nome,
+        valor: valor,
+        moeda: g.moeda,
+        forma: ppMetodo,
+        tipo: 'parcial',
+        data: todayStr(),
+        hora: horaAtual()
+      });
+      render();
+      closeOverlay();
+      toast('Pagamento parcial registrado — quarto ' + n);
+    });
+  }
+
+  // ---- Reservas (calendário) ----
+  var MONTH_NAMES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  var today = new Date();
+  var calYear = today.getFullYear();
+  var calMonth = today.getMonth();
+
+  function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+
+  function dateKey(y,m,d){ return y + '-' + pad2(m+1) + '-' + pad2(d); }
+
+  function isOccupiedOnDay(r, key){
+    if (r.checkout){
+      return r.checkin <= key && key < r.checkout;
+    }
+    return r.checkin === key;
+  }
+
+  function reservationsOnDay(key){
+    return reservations.filter(function(r){
+      return isOccupiedOnDay(r, key);
+    });
+  }
+
+  function renderCalendar(){
+    var titleEl = document.getElementById('calTitle');
+    if (!titleEl) return;
+    titleEl.textContent = MONTH_NAMES[calMonth] + ' ' + calYear;
+
+    var grid = document.getElementById('calGrid');
+    grid.innerHTML = '';
+    var firstDay = new Date(calYear, calMonth, 1);
+    var startWeekday = firstDay.getDay();
+    var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    var todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+    for (var i=0;i<startWeekday;i++){
+      var blank = document.createElement('div');
+      blank.className = 'cal-day empty';
+      grid.appendChild(blank);
+    }
+
+    for (var d=1; d<=daysInMonth; d++){
+      var key = dateKey(calYear, calMonth, d);
+      var cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cal-day' + (key === todayKey ? ' today' : '');
+      var dayRes = reservationsOnDay(key);
+      var html = '<div class="dnum">' + d + '</div>' +
+        '<div class="cal-count">' + dayRes.length + '/' + TOTAL_ROOMS + ' ocupados</div>';
+      cell.innerHTML = html;
+      cell.addEventListener('click', function(){
+        openRoomPickerForReservation(this.dataset.key);
+      });
+      cell.dataset.key = key;
+      grid.appendChild(cell);
+    }
+  }
+
+  function roomOptionsHtml(selected){
+    var opts = '';
+    ROOM_NUMS.forEach(function(n){
+      opts += '<option value="' + n + '"' + (n === selected ? ' selected' : '') + '>' + n + '</option>';
+    });
+    return opts;
+  }
+
+  function reservationForRoomOnDay(n, dateKey){
+    return reservations.find(function(r){
+      return r.quarto === n && isOccupiedOnDay(r, dateKey);
+    });
+  }
+
+  function reservasConflitantesRoom(quarto, checkin, checkout, excludeId){
+    var effCheckout = checkout || addDaysISO(checkin, 1);
+    return reservations.filter(function(r){
+      if (excludeId && r.id === excludeId) return false;
+      if (r.quarto !== quarto) return false;
+      var rCheckout = r.checkout || addDaysISO(r.checkin, 1);
+      return checkin < rCheckout && r.checkin < effCheckout;
+    });
+  }
+
+  function openRoomPickerForReservation(dateKey){
+    var floors = [
+      { label:'1º andar', nums: ROOM_NUMS.slice(0,10) },
+      { label:'2º andar', nums: ROOM_NUMS.slice(10,20) },
+      { label:'3º andar', nums: ROOM_NUMS.slice(20,30) },
+      { label:'4º andar', nums: ROOM_NUMS.slice(30,38) }
+    ];
+    var html = '<h3>Escolher quarto</h3>' +
+      '<p class="sub">Reserva' + (dateKey ? ' para ' + isoToBR(dateKey) : '') + '. Em vermelho, quartos já reservados nessa data. Em amarelo, quartos ocupados agora.</p>';
+    floors.forEach(function(f){
+      html += '<div class="pick-floor"><div class="pick-floor-label">' + f.label + '</div><div class="pick-rooms">';
+      f.nums.forEach(function(n){
+        var conflict = dateKey ? reservationForRoomOnDay(n, dateKey) : null;
+        var ocupAgora = null;
+        if (!conflict && state[n] && state[n].status === 'ocupado'){
+          var guestOcupado = state[n].guest || {};
+          var previsaoISO = guestOcupado.previsao ? brToISO(guestOcupado.previsao) : '';
+          var dentroPeriodo = !dateKey || !previsaoISO || dateKey < previsaoISO;
+          if (dentroPeriodo) ocupAgora = guestOcupado;
+        }
+        var cls = conflict ? 'reservado' : (ocupAgora ? 'ocupado-agora' : 'livre');
+        var label = conflict ? escapeHtml(conflict.nome) :
+          (ocupAgora ? escapeHtml(ocupAgora.nome) + (ocupAgora.previsao ? '<br>até ' + escapeHtml(ocupAgora.previsao) : '') : '');
+        html += '<button type="button" class="pick-room ' + cls + '" data-room="' + n + '">' +
+          '<div class="pick-num">' + n + '</div>' +
+          (label ? '<div class="pick-name">' + label + '</div>' : '') +
+          '</button>';
+      });
+      html += '</div></div>';
+    });
+    html += '<div class="actions">' +
+      '<button class="btn" id="pickCancelBtn" type="button">Cancelar</button>' +
+      '</div>';
+    openOverlay(html);
+    document.getElementById('pickCancelBtn').addEventListener('click', closeOverlay);
+    document.querySelectorAll('.pick-room').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var n = btn.dataset.room;
+        var conflict = dateKey ? reservationForRoomOnDay(n, dateKey) : null;
+        if (conflict){
+          openReservationForm(conflict, null);
+        } else {
+          openReservationForm(null, dateKey, n);
+        }
+      });
+    });
+  }
+
+  function openReservationForm(existing, prefillKey, prefillRoom){
+    var isEdit = !!existing;
+    var g = existing || {};
+    openOverlay(
+      '<h3>' + (isEdit ? 'Editar reserva' : 'Nova reserva') + '</h3>' +
+      '<p class="sub">Preencha os dados da reserva.</p>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="rNome">Nome completo</label><input id="rNome" list="clientNameListRes" placeholder="Nome do hóspede" value="' + escapeHtml(g.nome||'') + '"></div>' +
+        '<div class="field"><label for="rTelefone">Telefone</label><input id="rTelefone" placeholder="(00) 00000-0000" value="' + escapeHtml(g.telefone||'') + '"></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="rDocumento">Documento</label><input id="rDocumento" list="clientDocListRes" placeholder="RG, CPF ou passaporte" value="' + escapeHtml(g.documento||'') + '"></div>' +
+        '<div class="field"><label for="rNacionalidade">Nacionalidade</label>' +
+          '<input id="rNacionalidade" list="nacListRes" placeholder="Brasileira, paraguaia..." value="' + escapeHtml(g.nacionalidade||'') + '">' +
+          '<datalist id="nacListRes"><option value="Brasileira"><option value="Paraguaia"><option value="Argentina"><option value="Uruguaia"><option value="Boliviana"></datalist>' +
+        '</div>' +
+      '</div>' +
+      '<datalist id="clientNameListRes">' + clientNameOptions() + '</datalist>' +
+      '<datalist id="clientDocListRes">' + clientDocOptions() + '</datalist>' +
+      '<div class="field"><label for="rQuarto">Quarto</label><select id="rQuarto">' + roomOptionsHtml(isEdit ? (g.quarto||'') : (prefillRoom||'')) + '</select></div>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="rCheckin">Data de entrada</label><input id="rCheckin" type="date" value="' + (g.checkin || prefillKey || todayISO()) + '"></div>' +
+        '<div class="field"><label for="rCheckout">Data de saída</label><input id="rCheckout" type="date" value="' + (g.checkout || (isEdit ? '' : addDaysISO(g.checkin || prefillKey || todayISO(), 1))) + '"></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="rPreco">Preço da diária</label><input id="rPreco" type="number" min="0" step="0.01" placeholder="0" value="' + (g.preco != null ? g.preco : '') + '"></div>' +
+        '<div class="field"><label>Moeda</label><div class="curr-toggle" id="rCurrToggle">' +
+          '<button type="button" data-c="BRL" class="' + (g.moeda !== 'PYG' ? 'active' : '') + '">R$</button>' +
+          '<button type="button" data-c="PYG" class="' + (g.moeda === 'PYG' ? 'active' : '') + '">₲</button>' +
+        '</div></div>' +
+      '</div>' +
+      '<div class="field"><label for="rNotas">Observação</label><input id="rNotas" placeholder="Detalhes da reserva" value="' + escapeHtml(g.notas||'') + '"></div>' +
+      '<div class="err" id="resErr">Preencha nome, quarto e data de entrada para continuar.</div>' +
+      '<div class="actions">' +
+        '<button class="btn" id="rCancelBtn" type="button">Cancelar</button>' +
+        (isEdit ? '<button class="btn" id="rCheckinBtn" type="button">Fazer check-in</button>' : '') +
+        '<button class="btn primary" id="rSaveBtn" type="button">' + (isEdit ? 'Salvar alterações' : 'Salvar reserva') + '</button>' +
+      '</div>' +
+      (isEdit ? '<button class="link-danger" id="rDeleteBtn" type="button">Excluir reserva</button>' : '')
+    );
+    var resMoeda = g.moeda === 'PYG' ? 'PYG' : 'BRL';
+    bindClientAutofill('r');
+    document.getElementById('rCurrToggle').addEventListener('click', function(e){
+      var b = e.target.closest('button');
+      if (!b) return;
+      resMoeda = b.dataset.c;
+      Array.from(document.querySelectorAll('#rCurrToggle button')).forEach(function(x){ x.classList.toggle('active', x===b); });
+    });
+    document.getElementById('rCancelBtn').addEventListener('click', closeOverlay);
+    document.getElementById('rSaveBtn').addEventListener('click', function(){
+      var nome = document.getElementById('rNome').value.trim();
+      var checkin = document.getElementById('rCheckin').value;
+      var checkout = document.getElementById('rCheckout').value;
+      var quarto = document.getElementById('rQuarto').value;
+      var err = document.getElementById('resErr');
+      if (!nome || !checkin || !quarto || (checkout && checkout < checkin)){
+        err.textContent = (checkout && checkout < checkin) ? 'A data de saída não pode ser antes da entrada.' : 'Preencha nome, quarto e data de entrada para continuar.';
+        err.classList.add('show');
+        return;
+      }
+      err.classList.remove('show');
+      if (checkin < todayISO()){
+        if (!confirm('A data escolhida já passou, deseja continuar mesmo assim?')) return;
+      }
+      if (state[quarto] && state[quarto].status === 'ocupado'){
+        var ocupante = state[quarto].guest || {};
+        var previsaoISO = ocupante.previsao ? brToISO(ocupante.previsao) : '';
+        var conflitaOcupacao = !previsaoISO || previsaoISO > checkin;
+        var msgConflito = previsaoISO
+          ? 'O quarto ' + quarto + ' está ocupado por ' + (ocupante.nome || 'um hóspede') + ' até ' + isoToBR(previsaoISO) + ', o que conflita com a entrada dessa reserva (' + isoToBR(checkin) + '). Deseja continuar mesmo assim?'
+          : 'O quarto ' + quarto + ' está ocupado por ' + (ocupante.nome || 'um hóspede') + ' e não tem previsão de checkout definida. Deseja continuar mesmo assim?';
+        if (conflitaOcupacao && !confirm(msgConflito)) return;
+      }
+      var conflitosReserva = reservasConflitantesRoom(quarto, checkin, checkout, isEdit ? g.id : null);
+      if (conflitosReserva.length > 0){
+        var nomesConflito = conflitosReserva.map(function(r){ return r.nome + ' (' + isoToBR(r.checkin) + (r.checkout ? ' — ' + isoToBR(r.checkout) : '') + ')'; }).join(', ');
+        if (!confirm('O quarto ' + quarto + ' já tem reserva conflitante nessas datas: ' + nomesConflito + '. Deseja continuar mesmo assim?')) return;
+      }
+      var preco = document.getElementById('rPreco').value;
+      var record = {
+        id: isEdit ? g.id : (Date.now() + '-' + Math.random().toString(36).slice(2,7)),
+        nome: nome,
+        telefone: document.getElementById('rTelefone').value.trim(),
+        documento: document.getElementById('rDocumento').value.trim(),
+        nacionalidade: document.getElementById('rNacionalidade').value.trim(),
+        quarto: quarto,
+        checkin: checkin,
+        checkout: checkout,
+        preco: preco === '' ? null : Number(preco),
+        moeda: resMoeda,
+        notas: document.getElementById('rNotas').value.trim()
+      };
+      if (isEdit){
+        var idx = reservations.findIndex(function(r){ return r.id === g.id; });
+        if (idx > -1) reservations[idx] = record;
+      } else {
+        reservations.push(record);
+      }
+      saveReservations();
+      upsertClientFromGuest(record);
+      render();
+      closeOverlay();
+      toast(isEdit ? 'Reserva atualizada' : 'Reserva salva');
+    });
+    if (isEdit){
+      document.getElementById('rCheckinBtn').addEventListener('click', function(){
+        var nome = document.getElementById('rNome').value.trim();
+        var quarto = document.getElementById('rQuarto').value;
+        var checkout = document.getElementById('rCheckout').value;
+        var err = document.getElementById('resErr');
+        if (!nome || !quarto){
+          err.textContent = 'Preencha nome e quarto para fazer o check-in.';
+          err.classList.add('show');
+          return;
+        }
+        if (state[quarto] && state[quarto].status === 'ocupado'){
+          err.textContent = 'O quarto ' + quarto + ' já está ocupado no momento — não é possível fazer check-in.';
+          err.classList.add('show');
+          return;
+        }
+        err.classList.remove('show');
+        var preco = document.getElementById('rPreco').value;
+        state[quarto] = {
+          status: 'ocupado',
+          guest: {
+            nome: nome,
+            telefone: document.getElementById('rTelefone').value.trim(),
+            documento: document.getElementById('rDocumento').value.trim(),
+            nacionalidade: document.getElementById('rNacionalidade').value.trim(),
+            preco: preco === '' ? 0 : Number(preco),
+            moeda: resMoeda,
+            descricao: document.getElementById('rNotas').value.trim(),
+            checkin: todayStr(),
+            previsao: checkout ? isoToBR(checkout) : ''
+          }
+        };
+        saveState();
+        upsertClientFromGuest(state[quarto].guest);
+        reservations = reservations.filter(function(r){ return r.id !== g.id; });
+        saveReservations();
+        render();
+        closeOverlay();
+        toast('Check-in feito a partir da reserva — quarto ' + quarto);
+        perguntarEImprimirCheckin(quarto, state[quarto].guest);
+      });
+      document.getElementById('rDeleteBtn').addEventListener('click', function(){
+        if (!confirm('Excluir esta reserva de ' + g.nome + '?')) return;
+        reservations = reservations.filter(function(r){ return r.id !== g.id; });
+        saveReservations();
+        render();
+        closeOverlay();
+        toast('Reserva excluída');
+      });
+    }
+  }
+
+  function openReservationsListModal(){
+    openOverlay(
+      '<h3>Todas as reservas</h3>' +
+      '<p class="sub">Toque em uma reserva para ver ou editar.</p>' +
+      '<div class="field"><input type="text" id="resListSearch" placeholder="Buscar por nome ou quarto..."></div>' +
+      '<div class="client-list" id="resListContainer" style="max-height:420px;overflow-y:auto;"></div>' +
+      '<div class="actions"><button class="btn" id="resListCloseBtn" type="button">Fechar</button></div>'
+    );
+    document.getElementById('resListCloseBtn').addEventListener('click', closeOverlay);
+    document.getElementById('resListSearch').addEventListener('input', function(){
+      renderReservationsList(this.value);
+    });
+    renderReservationsList('');
+  }
+
+  function renderReservationsList(filterText){
+    var el = document.getElementById('resListContainer');
+    if (!el) return;
+    var q = (filterText || '').trim().toLowerCase();
+    var filtered = reservations.filter(function(r){
+      return !q || (r.nome||'').toLowerCase().indexOf(q) > -1 || (r.quarto||'').toLowerCase().indexOf(q) > -1;
+    });
+    if (filtered.length === 0){
+      el.innerHTML = '<div class="client-empty">' + (reservations.length === 0 ? 'Nenhuma reserva cadastrada ainda.' : 'Nenhuma reserva encontrada.') + '</div>';
+      return;
+    }
+    var ordenadas = filtered.slice().sort(function(a,b){ return (a.checkin||'').localeCompare(b.checkin||''); });
+    el.innerHTML = '';
+    ordenadas.forEach(function(r){
+      var periodo = isoToBR(r.checkin) + (r.checkout ? ' — ' + isoToBR(r.checkout) : '');
+      var precoTxt = (r.preco != null) ? ' · ' + fmt(r.preco, r.moeda) + '/diária' : '';
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'client-card';
+      card.innerHTML = '<div><div class="cc-name">' + escapeHtml(r.nome) + (r.quarto ? ' — quarto ' + escapeHtml(r.quarto) : '') + '</div>' +
+        '<div class="cc-meta">' + periodo + precoTxt + '</div></div>';
+      card.addEventListener('click', function(){
+        openReservationForm(r, null);
+      });
+      el.appendChild(card);
+    });
+  }
+
+  // ---- Clientes ----
+  function escapeAttr(s){
+    return escapeHtml(s);
+  }
+
+  function clientNameOptions(){
+    var seen = {};
+    return clients.filter(function(c){
+      var k = (c.nome||'').toLowerCase();
+      if (!k || seen[k]) return false;
+      seen[k] = true;
+      return true;
+    }).map(function(c){ return '<option value="' + escapeAttr(c.nome) + '">'; }).join('');
+  }
+
+  function clientDocOptions(){
+    var seen = {};
+    return clients.filter(function(c){
+      var k = (c.documento||'').toLowerCase();
+      if (!k || seen[k]) return false;
+      seen[k] = true;
+      return true;
+    }).map(function(c){ return '<option value="' + escapeAttr(c.documento) + '">'; }).join('');
+  }
+
+  function findClientByName(nome){
+    var q = (nome||'').trim().toLowerCase();
+    if (!q) return null;
+    return clients.find(function(c){ return (c.nome||'').trim().toLowerCase() === q; }) || null;
+  }
+
+  function findClientByDoc(doc){
+    var q = (doc||'').trim().toLowerCase();
+    if (!q) return null;
+    return clients.find(function(c){ return (c.documento||'').trim().toLowerCase() === q; }) || null;
+  }
+
+  function bindClientAutofill(prefix){
+    var nomeEl = document.getElementById(prefix + 'Nome');
+    var telEl = document.getElementById(prefix + 'Telefone');
+    var docEl = document.getElementById(prefix + 'Documento');
+    var nacEl = document.getElementById(prefix + 'Nacionalidade');
+    if (!nomeEl) return;
+    function fillFrom(c){
+      if (!c) return;
+      if (nomeEl && c.nome) nomeEl.value = c.nome;
+      if (telEl && c.telefone) telEl.value = c.telefone;
+      if (docEl && c.documento) docEl.value = c.documento;
+      if (nacEl && c.nacionalidade) nacEl.value = c.nacionalidade;
+    }
+    nomeEl.addEventListener('input', function(){
+      fillFrom(findClientByName(nomeEl.value));
+    });
+    if (docEl){
+      docEl.addEventListener('input', function(){
+        fillFrom(findClientByDoc(docEl.value));
+      });
+    }
+  }
+
+  function upsertClientFromGuest(g){
+    if (!g || !g.nome) return;
+    var existing = null;
+    if (g.documento) existing = findClientByDoc(g.documento);
+    if (!existing) existing = findClientByName(g.nome);
+    if (existing){
+      existing.nome = g.nome || existing.nome;
+      existing.telefone = g.telefone || existing.telefone;
+      existing.documento = g.documento || existing.documento;
+      existing.nacionalidade = g.nacionalidade || existing.nacionalidade;
+    } else {
+      clients.push({
+        id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+        nome: g.nome,
+        telefone: g.telefone || '',
+        documento: g.documento || '',
+        nacionalidade: g.nacionalidade || '',
+        descricao: ''
+      });
+    }
+    saveClients();
+  }
+
+  function renderClients(filterText){
+    var listEl = document.getElementById('clientList');
+    if (!listEl) return;
+    var q = (filterText != null ? filterText : (document.getElementById('clientSearch') ? document.getElementById('clientSearch').value : '')).trim().toLowerCase();
+    var filtered = clients.filter(function(c){
+      return !q || (c.nome||'').toLowerCase().indexOf(q) > -1;
+    });
+    if (filtered.length === 0){
+      listEl.innerHTML = '<div class="client-empty">' + (clients.length === 0 ? 'Nenhum cliente cadastrado ainda.' : 'Nenhum cliente encontrado.') + '</div>';
+      return;
+    }
+    listEl.innerHTML = filtered.slice().sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||''); }).map(function(c){
+      var meta = [c.documento, c.nacionalidade, c.telefone].filter(Boolean).join(' · ');
+      return '<button type="button" class="client-card" data-client-id="' + c.id + '">' +
+        '<div><div class="cc-name">' + escapeHtml(c.nome) + '</div>' +
+        (meta ? '<div class="cc-meta">' + escapeHtml(meta) + '</div>' : '') + '</div>' +
+        '</button>';
+    }).join('');
+    listEl.querySelectorAll('.client-card').forEach(function(card){
+      card.addEventListener('click', function(){
+        var c = clients.find(function(x){ return x.id === card.dataset.clientId; });
+        if (c) openClientForm(c);
+      });
+    });
+  }
+
+  function openClientForm(existing){
+    var isEdit = !!existing;
+    var g = existing || {};
+    openOverlay(
+      '<h3>' + (isEdit ? 'Editar cliente' : 'Novo cliente') + '</h3>' +
+      '<p class="sub">Dados de cadastro do cliente.</p>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="cNome">Nome completo</label><input id="cNome" placeholder="Nome do cliente" value="' + escapeHtml(g.nome||'') + '"></div>' +
+        '<div class="field"><label for="cTelefone">Telefone</label><input id="cTelefone" placeholder="(00) 00000-0000" value="' + escapeHtml(g.telefone||'') + '"></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="cDocumento">Documento</label><input id="cDocumento" placeholder="RG, CPF ou passaporte" value="' + escapeHtml(g.documento||'') + '"></div>' +
+        '<div class="field"><label for="cNacionalidade">Nacionalidade</label>' +
+          '<input id="cNacionalidade" list="nacListCli" placeholder="Brasileira, paraguaia..." value="' + escapeHtml(g.nacionalidade||'') + '">' +
+          '<datalist id="nacListCli"><option value="Brasileira"><option value="Paraguaia"><option value="Argentina"><option value="Uruguaia"><option value="Boliviana"></datalist>' +
+        '</div>' +
+      '</div>' +
+      '<div class="field"><label for="cDescricao">Descrição</label><input id="cDescricao" placeholder="Observações sobre o cliente" value="' + escapeHtml(g.descricao||'') + '"></div>' +
+      '<div class="err" id="cliErr">Preencha o nome para continuar.</div>' +
+      '<div class="actions">' +
+        '<button class="btn" id="cCancelBtn" type="button">Cancelar</button>' +
+        '<button class="btn primary" id="cSaveBtn" type="button">' + (isEdit ? 'Salvar alterações' : 'Salvar cliente') + '</button>' +
+      '</div>' +
+      (isEdit ? '<button class="link-danger" id="cDeleteBtn" type="button">Excluir cliente</button>' : '')
+    );
+    document.getElementById('cCancelBtn').addEventListener('click', closeOverlay);
+    document.getElementById('cSaveBtn').addEventListener('click', function(){
+      var nome = document.getElementById('cNome').value.trim();
+      var err = document.getElementById('cliErr');
+      if (!nome){
+        err.classList.add('show');
+        return;
+      }
+      err.classList.remove('show');
+      var record = {
+        id: isEdit ? g.id : (Date.now() + '-' + Math.random().toString(36).slice(2,7)),
+        nome: nome,
+        telefone: document.getElementById('cTelefone').value.trim(),
+        documento: document.getElementById('cDocumento').value.trim(),
+        nacionalidade: document.getElementById('cNacionalidade').value.trim(),
+        descricao: document.getElementById('cDescricao').value.trim()
+      };
+      if (isEdit){
+        var idx = clients.findIndex(function(c){ return c.id === g.id; });
+        if (idx > -1) clients[idx] = record;
+      } else {
+        clients.push(record);
+      }
+      saveClients();
+      renderClients();
+      closeOverlay();
+      toast(isEdit ? 'Cliente atualizado' : 'Cliente cadastrado');
+    });
+    if (isEdit){
+      document.getElementById('cDeleteBtn').addEventListener('click', function(){
+        if (!confirm('Excluir o cliente ' + g.nome + '?')) return;
+        clients = clients.filter(function(c){ return c.id !== g.id; });
+        saveClients();
+        renderClients();
+        closeOverlay();
+        toast('Cliente excluído');
+      });
+    }
+  }
+
+  // ---- Backup ----
+  function renderBackupInfo(){
+    var el = document.getElementById('backupInfo');
+    if (!el) return;
+    var ocupados = Object.keys(state || {}).filter(function(k){ return state[k].status === 'ocupado'; }).length;
+    el.innerHTML =
+      '<div class="stat"><div class="n">' + ocupados + '/' + TOTAL_ROOMS + '</div><div class="l">quartos ocupados</div></div>' +
+      '<div class="stat"><div class="n">' + reservations.length + '</div><div class="l">reservas</div></div>' +
+      '<div class="stat"><div class="n">' + clients.length + '</div><div class="l">clientes</div></div>' +
+      '<div class="stat"><div class="n">' + history.length + '</div><div class="l">checkouts no histórico</div></div>' +
+      '<div class="stat"><div class="n">' + turnos.length + '</div><div class="l">turnos registrados</div></div>';
+  }
+
+  function exportBackup(){
+    var hotelNameEl = document.getElementById('hotelName');
+    var payload = {
+      exportedAt: new Date().toISOString(),
+      hotelName: hotelNameEl ? hotelNameEl.textContent.trim() : '',
+      rooms: state,
+      history: history,
+      reservations: reservations,
+      clients: clients,
+      turnos: turnos
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var stamp = todayISO();
+    a.href = url;
+    a.download = 'backup-recepcao-' + stamp + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Backup exportado');
+  }
+
+  function importBackupFromFile(file){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var data;
+      try{
+        data = JSON.parse(reader.result);
+      }catch(e){
+        toast('Arquivo inválido. Não foi possível ler o backup.');
+        return;
+      }
+      if (!data || typeof data !== 'object' || !data.rooms){
+        toast('Este arquivo não parece ser um backup válido.');
+        return;
+      }
+      if (!confirm('Importar este backup vai substituir todos os dados atuais (quartos, reservas, clientes, turnos e histórico). Deseja continuar?')) return;
+      state = data.rooms || defaultState();
+      history = Array.isArray(data.history) ? data.history : [];
+      reservations = Array.isArray(data.reservations) ? data.reservations : [];
+      clients = Array.isArray(data.clients) ? data.clients : [];
+      turnos = Array.isArray(data.turnos) ? data.turnos : [];
+      saveState();
+      saveHistory();
+      saveReservations();
+      saveClients();
+      saveTurnos();
+      if (data.hotelName){
+        var hotelNameEl = document.getElementById('hotelName');
+        if (hotelNameEl){
+          hotelNameEl.textContent = data.hotelName;
+          storageSet('hotel-name', data.hotelName).catch(function(){});
+        }
+      }
+      render();
+      toast('Backup importado com sucesso');
+    };
+    reader.onerror = function(){
+      toast('Não foi possível ler o arquivo.');
+    };
+    reader.readAsText(file);
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', exportBackup);
+  document.getElementById('importFile').addEventListener('change', function(e){
+    var file = e.target.files && e.target.files[0];
+    if (file) importBackupFromFile(file);
+    e.target.value = '';
+  });
+
+  document.getElementById('clearHistoryBtn').addEventListener('click', function(){
+    if (history.length === 0){
+      toast('Não há histórico para excluir.');
+      return;
+    }
+    if (!confirm('Excluir permanentemente todos os ' + history.length + ' registros do histórico de checkout? Essa ação não pode ser desfeita.')) return;
+    history = [];
+    saveHistory();
+    render();
+    toast('Histórico de checkout excluído');
+  });
+
+  document.getElementById('clearTurnosBtn').addEventListener('click', function(){
+    var fechados = turnos.filter(function(t){ return t.fechamentoData; });
+    if (fechados.length === 0){
+      toast('Não há histórico de turnos para excluir.');
+      return;
+    }
+    if (!confirm('Excluir permanentemente todos os ' + fechados.length + ' turnos encerrados? Essa ação não pode ser desfeita.')) return;
+    turnos = turnos.filter(function(t){ return !t.fechamentoData; });
+    saveTurnos();
+    render();
+    toast('Histórico de turnos excluído');
+  });
+
+  document.getElementById('printSizeToggle').addEventListener('click', function(e){
+    var b = e.target.closest('button');
+    if (!b) return;
+    printFontSize = Number(b.dataset.size);
+    renderPrintSettings();
+    storageSet('print-font-size', String(printFontSize)).catch(function(){});
+  });
+
+  // ---- Turno (controle de caixa) ----
+  function horaAtual(){
+    var d = new Date();
+    var h = d.getHours(), m = d.getMinutes();
+    return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+  }
+
+  function turnoAtual(){
+    return turnos.find(function(t){ return !t.fechamentoData; }) || null;
+  }
+
+  function registrarMovimentoCaixa(mov){
+    var t = turnoAtual();
+    if (!t) return;
+    if (!Array.isArray(t.movimentos)) t.movimentos = [];
+    t.movimentos.push(mov);
+    saveTurnos();
+  }
+
+  function somaMovimentos(t, moeda, forma){
+    return (t.movimentos || []).filter(function(m){
+      return m.moeda === moeda && (!forma || m.forma === forma);
+    }).reduce(function(acc, m){ return acc + (Number(m.valor)||0); }, 0);
+  }
+
+  function somaRetiradas(t, moeda){
+    return (t.retiradas || []).filter(function(r){
+      return r.moeda === moeda;
+    }).reduce(function(acc, r){ return acc + (Number(r.valor)||0); }, 0);
+  }
+
+  function disponivelCaixa(t, moeda){
+    var abertura = moeda === 'BRL' ? (Number(t.valorAberturaBRL)||0) : (Number(t.valorAberturaPYG)||0);
+    var dinheiro = somaMovimentos(t, moeda, 'Dinheiro');
+    var retirado = somaRetiradas(t, moeda);
+    return abertura + dinheiro - retirado;
+  }
+
+  function renderTurno(){
+    var abertoEl = document.getElementById('turnoAberto');
+    var listEl = document.getElementById('turnoList');
+    if (!abertoEl || !listEl) return;
+
+    var atual = turnoAtual();
+    if (!atual){
+      abertoEl.innerHTML = '<div class="turno-card">' +
+        '<div class="turno-card-title">Nenhum turno aberto</div>' +
+        '<p class="sub">Abra um turno para começar a registrar os pagamentos recebidos no caixa.</p>' +
+        '<button class="btn primary" id="abrirTurnoBtn" type="button">Abrir turno</button>' +
+        '</div>';
+      document.getElementById('abrirTurnoBtn').addEventListener('click', openTurnoAbrirForm);
+    } else {
+      var dinheiroBRL = somaMovimentos(atual, 'BRL', 'Dinheiro');
+      var dinheiroPYG = somaMovimentos(atual, 'PYG', 'Dinheiro');
+      var outrosBRL = somaMovimentos(atual, 'BRL', 'Pix/Transferência');
+      var outrosPYG = somaMovimentos(atual, 'PYG', 'Pix/Transferência');
+      var retiradaBRL = somaRetiradas(atual, 'BRL');
+      var retiradaPYG = somaRetiradas(atual, 'PYG');
+      var movs = (atual.movimentos || []).slice().reverse();
+      var retiradas = (atual.retiradas || []).slice().reverse();
+      abertoEl.innerHTML = '<div class="turno-card">' +
+        '<div class="turno-card-title">Turno aberto — ' + escapeHtml(atual.operador) + '</div>' +
+        '<div class="detail">' +
+          '<div class="drow"><span>Abertura</span><span>' + atual.aberturaData + ' às ' + atual.aberturaHora + '</span></div>' +
+          '<div class="drow"><span>Caixa inicial</span><span>' + fmt(atual.valorAberturaBRL||0,'BRL') + ' · ' + fmt(atual.valorAberturaPYG||0,'PYG') + '</span></div>' +
+          '<div class="drow"><span>Recebido em dinheiro</span><span>' + fmt(dinheiroBRL,'BRL') + ' · ' + fmt(dinheiroPYG,'PYG') + '</span></div>' +
+          '<div class="drow"><span>Recebido em Pix/Transferência</span><span>' + fmt(outrosBRL,'BRL') + ' · ' + fmt(outrosPYG,'PYG') + '</span></div>' +
+          (retiradaBRL > 0 || retiradaPYG > 0 ? '<div class="drow"><span>Retiradas do caixa</span><span>' + fmt(retiradaBRL,'BRL') + ' · ' + fmt(retiradaPYG,'PYG') + '</span></div>' : '') +
+        '</div>' +
+        '<button class="btn" id="retiradaBtn" type="button">Registrar retirada</button>' +
+        '<button class="btn danger" id="fecharTurnoBtn" type="button">Fechar turno</button>' +
+        '<div class="turno-mov-list">' +
+        (movs.length === 0 ? '<div class="turno-empty">Nenhum pagamento registrado ainda neste turno.</div>' :
+          movs.slice(0,30).map(function(m){
+            var trocoTxt = (m.troco > 0) ? ' · recebido ' + fmt(m.recebido, m.moeda) + ', troco ' + fmt(m.troco, m.moeda) : '';
+            return '<div class="turno-mov-row"><div><div>' + escapeHtml(m.nome) + ' — quarto ' + m.quarto + '</div>' +
+              '<div class="meta">' + m.hora + ' · ' + m.forma + (m.tipo === 'parcial' ? ' · parcial' : '') + trocoTxt + '</div></div>' +
+              '<div>' + fmt(m.valor, m.moeda) + '</div></div>';
+          }).join('')) +
+        '</div>' +
+        (retiradas.length > 0 ?
+          '<div class="turno-mov-list">' +
+          retiradas.map(function(r){
+            return '<div class="turno-mov-row"><div><div>Retirada' + (r.observacao ? ' — ' + escapeHtml(r.observacao) : '') + '</div>' +
+              '<div class="meta">' + r.hora + '</div></div>' +
+              '<div>-' + fmt(r.valor, r.moeda) + '</div></div>';
+          }).join('') +
+          '</div>' : '') +
+        '</div>';
+      document.getElementById('retiradaBtn').addEventListener('click', function(){
+        openRetiradaForm(atual);
+      });
+      document.getElementById('fecharTurnoBtn').addEventListener('click', function(){
+        openTurnoFecharForm(atual);
+      });
+    }
+
+    var fechados = turnos.filter(function(t){ return t.fechamentoData; }).slice().reverse();
+    if (fechados.length === 0){
+      listEl.innerHTML = '<div class="turno-empty">Nenhum turno encerrado ainda.</div>';
+    } else {
+      listEl.innerHTML = fechados.map(function(t){
+        var difBRL = Number(t.diferencaBRL)||0;
+        var difPYG = Number(t.diferencaPYG)||0;
+        return '<div class="turno-row">' +
+          '<div class="tr-top"><span>' + escapeHtml(t.operador) + '</span><span>' + fmt(difBRL,'BRL') + ' · ' + fmt(difPYG,'PYG') + '</span></div>' +
+          '<div class="tr-meta">Abertura ' + t.aberturaData + ' ' + t.aberturaHora + ' · Fechamento ' + t.fechamentoData + ' ' + t.fechamentoHora + '</div>' +
+          '<div class="tr-meta">Contado: ' + fmt(t.contadoBRL||0,'BRL') + ' · ' + fmt(t.contadoPYG||0,'PYG') + '</div>' +
+          '</div>';
+      }).join('');
+    }
+  }
+
+  function openTurnoAbrirForm(){
+    openOverlay(
+      '<h3>Abrir turno</h3>' +
+      '<p class="sub">Informe o operador e o valor em caixa no início do turno.</p>' +
+      '<div class="field"><label for="tOperador">Nome do operador</label><input id="tOperador" placeholder="Nome de quem está abrindo o caixa"></div>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="tAberturaBRL">Caixa inicial (R$)</label><input id="tAberturaBRL" type="number" min="0" step="0.01" placeholder="0"></div>' +
+        '<div class="field"><label for="tAberturaPYG">Caixa inicial (₲)</label><input id="tAberturaPYG" type="number" min="0" step="1" placeholder="0"></div>' +
+      '</div>' +
+      '<div class="err" id="tErr">Informe o nome do operador para continuar.</div>' +
+      '<div class="actions">' +
+        '<button class="btn" id="tCancelBtn" type="button">Cancelar</button>' +
+        '<button class="btn primary" id="tConfirmBtn" type="button">Abrir turno</button>' +
+      '</div>'
+    );
+    document.getElementById('tCancelBtn').addEventListener('click', closeOverlay);
+    document.getElementById('tConfirmBtn').addEventListener('click', function(){
+      var operador = document.getElementById('tOperador').value.trim();
+      var err = document.getElementById('tErr');
+      if (!operador){
+        err.classList.add('show');
+        return;
+      }
+      err.classList.remove('show');
+      var novoTurno = {
+        id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+        operador: operador,
+        aberturaData: todayStr(),
+        aberturaHora: horaAtual(),
+        valorAberturaBRL: Number(document.getElementById('tAberturaBRL').value) || 0,
+        valorAberturaPYG: Number(document.getElementById('tAberturaPYG').value) || 0,
+        movimentos: [],
+        retiradas: [],
+        fechamentoData: null,
+        fechamentoHora: null
+      };
+      turnos.push(novoTurno);
+      saveTurnos();
+      renderTurno();
+      closeOverlay();
+      toast('Turno aberto — ' + operador);
+      perguntarEImprimirAberturaTurno(novoTurno);
+    });
+  }
+
+  function openRetiradaForm(t){
+    openOverlay(
+      '<h3>Registrar retirada</h3>' +
+      '<p class="sub">Informe o valor retirado do caixa e, se quiser, o motivo.</p>' +
+      '<div class="detail">' +
+        '<div class="drow"><span>Disponível em dinheiro</span><span id="rtDisponivel">' + fmt(disponivelCaixa(t,'BRL'),'BRL') + '</span></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="rtValor">Valor retirado</label><input id="rtValor" type="number" min="0" step="0.01" placeholder="0"></div>' +
+        '<div class="field"><label>Moeda</label><div class="curr-toggle" id="rtMoedaToggle">' +
+          '<button type="button" data-c="BRL" class="active">R$</button>' +
+          '<button type="button" data-c="PYG">₲</button>' +
+        '</div></div>' +
+      '</div>' +
+      '<div class="field"><label for="rtObs">Observação (opcional)</label><input id="rtObs" placeholder="Motivo da retirada"></div>' +
+      '<div class="err" id="rtErr">Informe um valor maior que zero.</div>' +
+      '<div class="actions">' +
+        '<button class="btn" id="rtCancelBtn" type="button">Cancelar</button>' +
+        '<button class="btn primary" id="rtConfirmBtn" type="button">Registrar retirada</button>' +
+      '</div>'
+    );
+    var rtMoeda = 'BRL';
+    var dispEl = document.getElementById('rtDisponivel');
+    document.getElementById('rtMoedaToggle').addEventListener('click', function(e){
+      var b = e.target.closest('button');
+      if (!b) return;
+      rtMoeda = b.dataset.c;
+      Array.from(document.querySelectorAll('#rtMoedaToggle button')).forEach(function(x){ x.classList.toggle('active', x===b); });
+      dispEl.textContent = fmt(disponivelCaixa(t, rtMoeda), rtMoeda);
+      document.getElementById('rtErr').classList.remove('show');
+    });
+    document.getElementById('rtCancelBtn').addEventListener('click', closeOverlay);
+    document.getElementById('rtConfirmBtn').addEventListener('click', function(){
+      var valorEl = document.getElementById('rtValor');
+      var valor = Number(valorEl.value);
+      var err = document.getElementById('rtErr');
+      if (valorEl.value === '' || isNaN(valor) || valor <= 0){
+        err.textContent = 'Informe um valor maior que zero.';
+        err.classList.add('show');
+        return;
+      }
+      var disponivel = disponivelCaixa(t, rtMoeda);
+      if (valor > disponivel){
+        err.textContent = 'Não há dinheiro suficiente no caixa. Disponível: ' + fmt(disponivel, rtMoeda) + '.';
+        err.classList.add('show');
+        return;
+      }
+      err.classList.remove('show');
+      if (!Array.isArray(t.retiradas)) t.retiradas = [];
+      t.retiradas.push({
+        valor: valor,
+        moeda: rtMoeda,
+        observacao: document.getElementById('rtObs').value.trim(),
+        data: todayStr(),
+        hora: horaAtual()
+      });
+      saveTurnos();
+      renderTurno();
+      closeOverlay();
+      toast('Retirada registrada');
+    });
+  }
+
+  function openTurnoFecharForm(t){
+    var dinheiroBRL = somaMovimentos(t, 'BRL', 'Dinheiro');
+    var dinheiroPYG = somaMovimentos(t, 'PYG', 'Dinheiro');
+    var retiradaBRL = somaRetiradas(t, 'BRL');
+    var retiradaPYG = somaRetiradas(t, 'PYG');
+    var esperadoBRL = (Number(t.valorAberturaBRL)||0) + dinheiroBRL - retiradaBRL;
+    var esperadoPYG = (Number(t.valorAberturaPYG)||0) + dinheiroPYG - retiradaPYG;
+    openOverlay(
+      '<h3>Fechar turno — ' + escapeHtml(t.operador) + '</h3>' +
+      '<p class="sub">Confira o valor físico no caixa antes de fechar (considera apenas pagamentos em dinheiro).</p>' +
+      '<div class="detail">' +
+        '<div class="drow"><span>Caixa inicial</span><span>' + fmt(t.valorAberturaBRL||0,'BRL') + ' · ' + fmt(t.valorAberturaPYG||0,'PYG') + '</span></div>' +
+        '<div class="drow"><span>Recebido em dinheiro</span><span>' + fmt(dinheiroBRL,'BRL') + ' · ' + fmt(dinheiroPYG,'PYG') + '</span></div>' +
+        (retiradaBRL > 0 || retiradaPYG > 0 ? '<div class="drow"><span>Retiradas</span><span>-' + fmt(retiradaBRL,'BRL') + ' · -' + fmt(retiradaPYG,'PYG') + '</span></div>' : '') +
+        '<div class="drow"><span>Esperado no caixa</span><span>' + fmt(esperadoBRL,'BRL') + ' · ' + fmt(esperadoPYG,'PYG') + '</span></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="field"><label for="tContadoBRL">Valor contado (R$)</label><input id="tContadoBRL" type="number" min="0" step="0.01" placeholder="0"></div>' +
+        '<div class="field"><label for="tContadoPYG">Valor contado (₲)</label><input id="tContadoPYG" type="number" min="0" step="1" placeholder="0"></div>' +
+      '</div>' +
+      '<div class="actions">' +
+        '<button class="btn" id="tfCancelBtn" type="button">Cancelar</button>' +
+        '<button class="btn primary" id="tfConfirmBtn" type="button">Confirmar fechamento</button>' +
+      '</div>'
+    );
+    document.getElementById('tfCancelBtn').addEventListener('click', closeOverlay);
+    document.getElementById('tfConfirmBtn').addEventListener('click', function(){
+      var contadoBRL = Number(document.getElementById('tContadoBRL').value) || 0;
+      var contadoPYG = Number(document.getElementById('tContadoPYG').value) || 0;
+      if (!confirm('Fechar o turno de ' + t.operador + '? Essa ação não pode ser desfeita.')) return;
+      t.fechamentoData = todayStr();
+      t.fechamentoHora = horaAtual();
+      t.contadoBRL = contadoBRL;
+      t.contadoPYG = contadoPYG;
+      t.esperadoBRL = esperadoBRL;
+      t.esperadoPYG = esperadoPYG;
+      t.diferencaBRL = contadoBRL - esperadoBRL;
+      t.diferencaPYG = contadoPYG - esperadoPYG;
+      saveTurnos();
+      render();
+      closeOverlay();
+      toast('Turno fechado — ' + t.operador);
+      perguntarEImprimirFechamentoTurno(t, dinheiroBRL, dinheiroPYG, retiradaBRL, retiradaPYG);
+    });
+  }
+
+  function bindNav(){
+    document.querySelectorAll('.nav-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.toggle('active', b===btn); });
+        var view = btn.dataset.view;
+        document.getElementById('view-checkin').hidden = (view !== 'checkin');
+        document.getElementById('view-history').hidden = (view !== 'history');
+        document.getElementById('view-reservas').hidden = (view !== 'reservas');
+        document.getElementById('view-clientes').hidden = (view !== 'clientes');
+        document.getElementById('view-turno').hidden = (view !== 'turno');
+        document.getElementById('view-backup').hidden = (view !== 'backup');
+        document.getElementById('view-config').hidden = (view !== 'config');
+      });
+    });
+  }
+  bindNav();
+
+  document.getElementById('calPrev').addEventListener('click', function(){
+    calMonth--;
+    if (calMonth < 0){ calMonth = 11; calYear--; }
+    renderCalendar();
+  });
+  document.getElementById('calNext').addEventListener('click', function(){
+    calMonth++;
+    if (calMonth > 11){ calMonth = 0; calYear++; }
+    renderCalendar();
+  });
+  document.getElementById('calAddBtn').addEventListener('click', function(){
+    openRoomPickerForReservation(todayISO());
+  });
+
+  document.getElementById('calListBtn').addEventListener('click', function(){
+    openReservationsListModal();
+  });
+
+  document.getElementById('clientAddBtn').addEventListener('click', function(){
+    openClientForm(null);
+  });
+  document.getElementById('clientSearch').addEventListener('input', function(){
+    renderClients(this.value);
+  });
+
+  var nameEl = document.getElementById('hotelName');
+  storageGet('hotel-name').then(function(v){
+    nameEl.textContent = v;
+  }).catch(function(){});
+  nameEl.addEventListener('blur', function(){
+    var v = nameEl.textContent.trim() || 'Hotel — Recepção';
+    nameEl.textContent = v;
+    storageSet('hotel-name', v).catch(function(){});
+  });
+
+  bindRoomClicks();
+  loadState();
+})();
+</script>
+</body>
+</html>
